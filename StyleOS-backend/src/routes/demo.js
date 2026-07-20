@@ -314,7 +314,7 @@ router.post('/seed', async (req, res) => {
       const slotKeyStr = `mission:${mId}:${evMehendi.id}:${memSneha.id}`;
       await query(
         `INSERT INTO slot_rejections (id, mission_id, slot_key, product_id, product_price, product_colour, rejected_by_name, reason_text, reason_class, rejected_at)
-         VALUES (:id, :mid, :sk, :pid, 2800, 'Yellow', 'Sneha', 'not fancy enough, too simple for groom sister!', 'quality', SYSTIMESTAMP - 1/24)`,
+         VALUES (:id, :mid, :sk, :pid, 2800, 'Yellow', 'Sneha', 'not fancy enough, too simple for groom sister!', 'quality', SYSTIMESTAMP - INTERVAL '1' HOUR)`,
         { id: uuidv4(), mid: mId, sk: slotKeyStr, pid: rejectedProductId }
       );
 
@@ -537,7 +537,7 @@ router.post('/seed-all', async (req, res) => {
     const slotKeyStr = `mission:${mId}:${evMehendi.id}:${memSneha.id}`;
     await query(
       `INSERT INTO slot_rejections (id, mission_id, slot_key, product_id, product_price, product_colour, rejected_by_name, reason_text, reason_class, rejected_at)
-       VALUES (:id, :mid, :sk, :pid, 2800, 'Yellow', 'Sneha', 'not fancy enough, too simple for groom sister!', 'quality', SYSTIMESTAMP - 1/24)`,
+       VALUES (:id, :mid, :sk, :pid, 2800, 'Yellow', 'Sneha', 'not fancy enough, too simple for groom sister!', 'quality', SYSTIMESTAMP - INTERVAL '1' HOUR)`,
       { id: uuidv4(), mid: mId, sk: slotKeyStr, pid: rejectedProductId }
     );
     const premiumProductId = '540974c2-719a-4c82-9c3a-ff6b4cf7f4b1';
