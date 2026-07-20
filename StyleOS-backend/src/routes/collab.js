@@ -17,6 +17,15 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
  * checking. Otherwise a legitimate collab-link holder for cart A could
  * attach a reaction to an arbitrary item in cart B just by knowing its id.
  */
+// A Collab Cart is a live room with a lifespan, not a permanent page
+// (Collab Cart Complete Session UX Spec, §1) — `expiresAt` is null for
+// sessions created before this existed (never expires, so old links keep
+// working) or when the owner picked "no limit".
+function isExpired(session) {
+  const expiresAt = session.EXPIRES_AT || session.expiresAt;
+  return Boolean(expiresAt && new Date(expiresAt).getTime() < Date.now());
+}
+
 async function belongsToSession(session, cartItemId, missionSlotId) {
   const sessionCartId = session.CART_ID || session.cartId;
   const sessionMissionId = session.MISSION_ID || session.missionId;
@@ -48,15 +57,20 @@ router.post('/create/:cartId', auth, async (req, res) => {
     // intentionally allowed to view a cart's contents.
     if (!ownsCart(cart, req.user.id)) return res.status(403).json({ error: 'Not authorized for this cart' });
 
-    const { askMode, recipientName, recipientRelation } = req.body || {};
+    const { askMode, recipientName, recipientRelation, durationHours } = req.body || {};
     const validModes = ['advisor', 'approver', 'proxy', 'peer', 'co_attendee'];
     const mode = validModes.includes(askMode) ? askMode : 'advisor';
+    // Start-session sheet's "Session stays live for" — a real number of
+    // hours, or omitted/0 for no limit. Only applied on first creation; an
+    // already-live session's expiry isn't silently extended by reopening
+    // the share sheet.
+    const expiresAt = durationHours ? new Date(Date.now() + durationHours * 3600 * 1000) : null;
 
     let session = await CollabSession.findByCart(req.params.cartId);
     if (!session) {
       session = await CollabSession.create({
         cartId: req.params.cartId, shareToken: uuidv4(),
-        askMode: mode, recipientName, recipientRelation,
+        askMode: mode, recipientName, recipientRelation, expiresAt,
       });
     }
 
@@ -77,6 +91,7 @@ router.post('/create/:cartId', auth, async (req, res) => {
       shareUrl,
       askMode: mode,
       whatsappUrl: `https://wa.me/?text=${encodeURIComponent(shareCopy)}`,
+      expiresAt: session.EXPIRES_AT || session.expiresAt || null,
     });
   } catch (err) {
     console.error(err);
@@ -167,11 +182,49 @@ router.post('/:token/guest-join', async (req, res) => {
   }
 });
 
+// GET /api/collab/:token/preview — genuinely public, no identity required.
+// The join screen needs to say "Jai invited you," not "Someone wants your
+// opinion," but a brand-new visitor has no account and no guest token yet —
+// identify's auth wall would 401 them before they ever see who's asking.
+// Deliberately minimal: just enough to make the invite feel personal,
+// nothing about the cart's actual contents.
+router.get('/:token/preview', async (req, res) => {
+  try {
+    const session = await CollabSession.findByToken(req.params.token);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (isExpired(session)) return res.json({ expired: true });
+
+    const missionId = session.MISSION_ID || session.missionId;
+    let ownerName = 'Someone';
+    let itemCount = 0;
+    if (missionId) {
+      const mission = await Mission.findById(missionId);
+      const owner = await User.findById(mission?.USER_ID || mission?.userId);
+      ownerName = owner?.NAME || owner?.name || 'Someone';
+      const missionMembers = await MissionMember.findByMission(missionId);
+      itemCount = missionMembers.length;
+    } else {
+      const cartId = session.CART_ID || session.cartId;
+      const cart = await Cart.findById(cartId);
+      const owner = await User.findById(cart?.OWNER_ID || cart?.ownerId);
+      ownerName = owner?.NAME || owner?.name || 'Someone';
+      const items = await CartItem.findByCart(cartId);
+      itemCount = items.length;
+    }
+
+    res.json({ ownerName, itemCount, mode: missionId ? 'mission' : 'cart' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load invite preview' });
+  }
+});
+
 // GET /api/collab/:token
 router.get('/:token', identify, async (req, res) => {
   try {
     const session = await CollabSession.findByToken(req.params.token);
     if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (isExpired(session)) return res.json({ expired: true });
 
     const sessionId = session.ID || session.id;
     const missionId = session.MISSION_ID || session.missionId;
@@ -185,7 +238,11 @@ router.get('/:token', identify, async (req, res) => {
       for (const slot of slots) {
         slot.reactions = await Reaction.findByMissionSlot(slot.id);
       }
-      return res.json({ session, mode: 'mission', mission, events, missionMembers, slots, members });
+      const missionOwner = await User.findById(mission.USER_ID || mission.userId);
+      return res.json({
+        session, mode: 'mission', mission, events, missionMembers, slots, members,
+        ownerName: missionOwner?.NAME || missionOwner?.name || 'Someone',
+      });
     }
 
     const cartId = session.CART_ID || session.cartId;
@@ -196,7 +253,12 @@ router.get('/:token', identify, async (req, res) => {
     }
     cart.items = items;
 
-    res.json({ session, mode: 'cart', cart, members });
+    // The name behind the invite — "Jai invited you," not "someone wants
+    // your opinion" — is what makes the join moment feel like it's actually
+    // from a person, not a generic share link.
+    const cartOwner = await User.findById(cart.OWNER_ID || cart.ownerId);
+
+    res.json({ session, mode: 'cart', cart, members, ownerName: cartOwner?.NAME || cartOwner?.name || 'Someone' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch collab session' });
@@ -640,6 +702,109 @@ router.post('/:token/resolve-peer-deadlock', identify, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to resolve peer deadlock' });
+  }
+});
+
+// POST /api/collab/:token/control-swap — Tier 4's real capability: once a
+// guest has been granted floor control (socket-side control:grant), they
+// can actually swap an item, not just watch. Reuses the exact CartItem
+// update + Cart.updateTotal path agent.js's owner-only /swap uses, just
+// authorized via belongsToSession (guest-token-aware) instead of ownsCart.
+router.post('/:token/control-swap', identify, async (req, res) => {
+  try {
+    const { cartItemId, newProductId } = req.body || {};
+    if (!cartItemId || !newProductId) return res.status(400).json({ error: 'cartItemId and newProductId required' });
+
+    const session = await CollabSession.findByToken(req.params.token);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (!(await belongsToSession(session, cartItemId, null))) {
+      return res.status(403).json({ error: 'That item is not part of this shared wardrobe' });
+    }
+
+    const cartId = session.CART_ID || session.cartId;
+    if (!cartId) return res.status(400).json({ error: 'Co-editing is only available for cart-based wardrobes' });
+
+    const { query } = require('../db');
+    const pr = await query(`SELECT * FROM products WHERE id = :id`, { id: newProductId });
+    const product = pr.rows?.[0];
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    await CartItem.update(cartItemId, { productId: newProductId });
+    await Cart.updateTotal(cartId);
+    const updated = await Cart.findById(cartId);
+
+    const swappedProduct = {
+      id: product.ID, title: product.TITLE, brand: product.BRAND, price: product.PRICE,
+      articleType: product.ARTICLE_TYPE, baseColour: product.BASE_COLOUR,
+      images: safeJsonArr(product.IMAGES), mrp: product.MRP, fabric: product.FABRIC,
+      deliveryDays: product.DELIVERY_DAYS,
+    };
+    const cartTotal = updated?.TOTAL_PRICE || updated?.totalPrice || 0;
+
+    if (req.io) {
+      req.io.to(`collab_${req.params.token}`).emit('cart:item_swapped', {
+        cartItemId, product: swappedProduct, cartTotal, byName: req.identity.name,
+      });
+    }
+
+    res.json({ ok: true, product: swappedProduct, cartTotal });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Swap failed' });
+  }
+});
+
+// GET /api/collab/:token/timeline — Tier 6: a real, non-fabricated decision
+// history built only from what's actually persisted (reactions + when
+// people joined). Presence/cursors/chat are deliberately excluded — those
+// are live-only and never claimed to be durable (sockets/index.js).
+router.get('/:token/timeline', identify, async (req, res) => {
+  try {
+    const session = await CollabSession.findByToken(req.params.token);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    const sessionId = session.ID || session.id;
+    const cartId = session.CART_ID || session.cartId;
+    const missionId = session.MISSION_ID || session.missionId;
+    const { query } = require('../db');
+
+    const eventsR = await query(
+      `SELECT r.id, r.reaction_type, r.content, r.created_at,
+              COALESCE(u.name, r.guest_name) AS display_name,
+              COALESCE(cp.title, mp.title) AS item_title
+       FROM reactions r
+       LEFT JOIN users u ON u.id = r.user_id
+       LEFT JOIN cart_items ci ON ci.id = r.cart_item_id
+       LEFT JOIN products cp ON cp.id = ci.product_id
+       LEFT JOIN mission_slots ms ON ms.id = r.mission_slot_id
+       LEFT JOIN products mp ON mp.id = ms.product_id
+       WHERE (:cartId IS NOT NULL AND ci.cart_id = :cartId)
+          OR (:missionId IS NOT NULL AND ms.mission_id = :missionId)
+       ORDER BY r.created_at ASC`,
+      { cartId: cartId || null, missionId: missionId || null }
+    );
+
+    const joinsR = await query(
+      `SELECT cm.id, cm.created_at, COALESCE(u.name, cm.guest_name) AS display_name
+       FROM collab_members cm LEFT JOIN users u ON u.id = cm.user_id
+       WHERE cm.session_id = :sid ORDER BY cm.created_at ASC`,
+      { sid: sessionId }
+    );
+
+    const timeline = [
+      ...(joinsR.rows || []).map(row => ({
+        type: 'joined', ts: row.CREATED_AT, name: row.DISPLAY_NAME || 'Someone',
+      })),
+      ...(eventsR.rows || []).map(row => ({
+        type: row.REACTION_TYPE, ts: row.CREATED_AT, name: row.DISPLAY_NAME || 'Someone',
+        itemTitle: row.ITEM_TITLE, content: row.CONTENT,
+      })),
+    ].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+    res.json({ timeline });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load timeline' });
   }
 });
 

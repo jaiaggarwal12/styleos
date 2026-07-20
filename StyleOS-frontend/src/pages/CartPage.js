@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { cart as cartApi, collab as collabApi, party as partyApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './CartPage.css';
+
+const DURATION_OPTIONS = [
+  { label: '1 hour', hours: 1 },
+  { label: '6 hours', hours: 6 },
+  { label: '24 hours', hours: 24 },
+  { label: 'No limit', hours: 0 },
+];
 
 export default function CartPage() {
   const { id } = useParams();
@@ -11,6 +19,9 @@ export default function CartPage() {
   const [cartData, setCartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [shareUrl, setShareUrl] = useState('');
+  const [shareToken, setShareToken] = useState('');
+  const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const [sharing, setSharing] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState(false);
@@ -20,6 +31,9 @@ export default function CartPage() {
   const [askMode, setAskMode] = useState('advisor');
   const [recipientName, setRecipientName] = useState('');
   const [recipientRelation, setRecipientRelation] = useState('');
+  // "Session stays live for" (Collab Cart Complete Session UX Spec §1) — a
+  // room has a lifespan, not a permanent page.
+  const [durationHours, setDurationHours] = useState(6);
 
   useEffect(() => {
     if (!id) return;
@@ -28,33 +42,48 @@ export default function CartPage() {
         setCartData(data);
         const token = data.collabSession?.SHARE_TOKEN || data.collabSession?.shareToken;
         if (token) {
-          const base = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:3000';
-          setShareUrl(`${base}/collab/${token}`);
+          // window.location.origin, not REACT_APP_API_URL — that env var
+          // points at the BACKEND (port 5000, no /collab route at all,
+          // only /api/collab), so stripping "/api" off it built a link to
+          // "Cannot GET /collab/:token" instead of the actual frontend page.
+          // The page's own origin is always correct regardless of whether
+          // it's being viewed as localhost or a LAN IP.
+          setShareUrl(`${window.location.origin}/collab/${token}`);
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleShare = async (mode) => {
+  const handleShare = async (mode, method) => {
     setSharing(true);
     try {
       // CO-ATTENDEE is structurally different — a Party groups several
       // attendees' INDIVIDUAL carts (the Clash Engine needs to compare
       // across carts), not one shared cart with several reviewers, which
       // is what every other mode's collab_session already models.
-      const { shareUrl: url, whatsappUrl } = mode === 'co_attendee'
+      const { shareUrl: url, shareToken: token, whatsappUrl: wUrl } = mode === 'co_attendee'
         ? await partyApi.create(cartData?.name || cartData?.NAME)
-        : await collabApi.create(id, mode, recipientName, recipientRelation);
+        : await collabApi.create(id, mode, recipientName, recipientRelation, durationHours || undefined);
       setShareUrl(url);
+      setShareToken(token);
+      setWhatsappUrl(wUrl);
       setShowModePicker(false);
-      window.open(whatsappUrl, '_blank');
+      if (method === 'whatsapp') window.open(wUrl, '_blank');
+      if (method === 'copy') navigator.clipboard.writeText(url);
     } catch (e) {
       console.error(e);
     } finally {
       setSharing(false);
     }
   };
+
+  useEffect(() => {
+    if (!shareUrl) { setQrDataUrl(''); return; }
+    QRCode.toDataURL(shareUrl, { width: 200, margin: 1 })
+      .then(setQrDataUrl)
+      .catch(console.error);
+  }, [shareUrl]);
 
   const MODE_OPTIONS = [
     { key: 'advisor', emoji: '💬', label: 'Ask their opinion', sub: 'Swipe, react, comment — the classic Squad Cart' },
@@ -140,8 +169,8 @@ export default function CartPage() {
         </div>
 
         {!shareUrl && !showModePicker && (
-          <button className="btn-share" onClick={() => setShowModePicker(true)}>
-            📱 Share for a second opinion
+          <button className="btn-collab" onClick={() => setShowModePicker(true)}>
+            👨‍👩‍👧 Make a Collab Cart
           </button>
         )}
 
@@ -175,16 +204,54 @@ export default function CartPage() {
                 />
               </div>
             )}
-            <button className="btn-share" onClick={() => handleShare(askMode)} disabled={sharing}>
-              {sharing ? 'Generating link...' : `Generate link →`}
-            </button>
+
+            <p className="mode-picker-label">Session stays live for</p>
+            <div className="duration-picker">
+              {DURATION_OPTIONS.map(d => (
+                <button
+                  key={d.hours}
+                  className={`duration-option ${durationHours === d.hours ? 'duration-option-active' : ''}`}
+                  onClick={() => setDurationHours(d.hours)}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mode-picker-label">How should they join?</p>
+            <div className="share-method-row">
+              <button className="share-method-btn" onClick={() => handleShare(askMode, 'whatsapp')} disabled={sharing}>
+                📱 WhatsApp
+              </button>
+              <button className="share-method-btn" onClick={() => handleShare(askMode, 'copy')} disabled={sharing}>
+                🔗 Copy link
+              </button>
+              <button className="share-method-btn" onClick={() => handleShare(askMode, 'qr')} disabled={sharing}>
+                📷 QR code
+              </button>
+            </div>
+            {sharing && <p className="mode-picker-label" style={{ textAlign: 'center' }}>Starting session...</p>}
           </div>
         )}
 
         {shareUrl && (
-          <div className="share-link-row">
-            <input readOnly value={shareUrl} onClick={e => e.target.select()} />
-            <button onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</button>
+          <div className="live-session-share">
+            <div className="share-link-row">
+              <input readOnly value={shareUrl} onClick={e => e.target.select()} />
+              <button onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</button>
+            </div>
+            <div className="share-method-row">
+              <button className="share-method-btn" onClick={() => window.open(whatsappUrl, '_blank')}>📱 WhatsApp</button>
+              {qrDataUrl && <img className="share-qr-thumb" src={qrDataUrl} alt="QR code to join" />}
+            </div>
+            {/* Generating the link doesn't put you IN the room — you have
+                to actually open it, same as anyone else, to see presence,
+                sharing controls, and live reactions land. */}
+            {shareToken && (
+              <button className="btn-collab" onClick={() => navigate(`/collab/${shareToken}`)}>
+                🎥 Enter live session →
+              </button>
+            )}
           </div>
         )}
 

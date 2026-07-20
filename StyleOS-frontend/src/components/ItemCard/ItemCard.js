@@ -1,15 +1,25 @@
-import React from 'react'
+import React, { useState } from 'react'
 import './ItemCard.css'
 import {ViewSimilarButton} from '../index';
 import {Link } from "react-router-dom";
 import { addItemToWishlist , removeItemFromWishlist } from '../../actions/wishlist';
-import { useDispatch , useSelector } from 'react-redux'; 
-import { nFormatter , isInWishList } from '../../helpers/general';
+import { addItemToBag } from '../../actions/bag';
+import { useDispatch , useSelector } from 'react-redux';
+import { nFormatter , isInWishList, isInBag } from '../../helpers/general';
 export default function ItemCard( {item , index} ) {
-    
+
     const dispatch = useDispatch();
     const wishlist = useSelector(state => state.wishlistStore);
+    const bag = useSelector(state => state.bagStore);
     let isWishlisted = isInWishList( wishlist , item );
+    let isBagged = isInBag( bag , item );
+    const [pickingSize, setPickingSize] = useState(false);
+    const sizes = item.sizes && item.sizes.length > 0 ? item.sizes : ['S', 'M', 'L', 'XL'];
+
+    const handleQuickAdd = (size) => {
+        dispatch(addItemToBag(item, size));
+        setPickingSize(false);
+    };
     return (
         <div className="item-card" key={index}>
             <div className="item-image">
@@ -65,29 +75,53 @@ export default function ItemCard( {item , index} ) {
                     &nbsp;
                     WISHLISTED
                 </button>
-                <p className="available-sizes" >
-                    <span
-                        style={{color: 'black'}}
+                {isBagged ? (
+                    <button className="quick-add-button center added" disabled>
+                        <i class="fas fa-check"></i>&nbsp;IN BAG
+                    </button>
+                ) : (
+                    <button
+                        className="quick-add-button center"
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setPickingSize(true); }}
                     >
-                        Sizes
-                    </span>
-                    : 38, 40, 42, 44, 46
-                </p>
+                        <i class="fas fa-shopping-bag"></i>&nbsp;ADD TO BAG
+                    </button>
+                )}
             </div>
             <div className="item-list-mobile-action" >
-                <button 
+                <button
                     onClick={()=> dispatch(addItemToWishlist(item))}
                     style={{display: isWishlisted ? 'none' : 'block'}}
                 >
                     <i class="far fa-heart heart-add"></i>
                 </button>
-                <button 
+                <button
                     onClick={()=> dispatch(removeItemFromWishlist(item))}
                     style={{display: !isWishlisted ? 'none' : 'block'}}
                 >
                     <i class="fas fa-heart heart-remove"></i>
                 </button>
+                <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setPickingSize(true); }}
+                    style={{display: isBagged ? 'none' : 'block'}}
+                >
+                    <i class="fas fa-shopping-bag"></i>
+                </button>
             </div>
+            {pickingSize && (
+                <div className="quick-size-sheet-backdrop" onClick={e => { e.preventDefault(); e.stopPropagation(); setPickingSize(false); }}>
+                    <div className="quick-size-sheet" onClick={e => e.stopPropagation()}>
+                        <p className="quick-size-sheet-title">Select size — {item.productName}</p>
+                        <div className="quick-size-row">
+                            {sizes.map(size => (
+                                <button key={size} className="quick-size-chip" onClick={() => handleQuickAdd(size)}>
+                                    {size}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

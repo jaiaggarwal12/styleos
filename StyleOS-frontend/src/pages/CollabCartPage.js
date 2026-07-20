@@ -3,6 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { collab as collabApi, agent as agentApi } from '../services/api';
 import { getSocket, joinCollab, leaveCollab, joinMission } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
+import { useCollabPresence } from '../hooks/useCollabPresence';
+import LiveActionRail from '../components/collab/LiveActionRail';
+import LiveBanners from '../components/collab/LiveBanners';
+import LiveOverlay from '../components/collab/LiveOverlay';
+import EngagementBar from '../components/collab/EngagementBar';
+import ChatPanel from '../components/collab/ChatPanel';
+import TimelinePanel from '../components/collab/TimelinePanel';
+import PresenceBar from '../components/collab/PresenceBar';
+import SharingControlsPanel from '../components/collab/SharingControlsPanel';
+import JoinerControlsPanel from '../components/collab/JoinerControlsPanel';
+import SessionEndScreen from '../components/collab/SessionEndScreen';
+import CelebrationBurst from '../components/collab/CelebrationBurst';
+import { getIsActualOwner } from '../helpers/collabOwnership';
 import './CollabCartPage.css';
 import '../pages/Mission.css'; // shared deadlock/escalation modal — same "winning moment" on both phones
 
@@ -51,8 +64,21 @@ export default function CollabCartPage({ overrideView }) {
   const [joinName, setJoinName] = useState('');
   const [joining, setJoining] = useState(false);
 
+  // Who actually sent this link — "Jai invited you," not "someone wants
+  // your opinion." Fetched from the public preview endpoint so it's
+  // available even before a guest has a name/token yet.
+  const [ownerName, setOwnerName] = useState(null);
+  // A visible "X just joined" moment for whoever's already in the room —
+  // the live half of the invite loop, not just the static join screen.
+  const [joinToast, setJoinToast] = useState(null);
+
   // "Mom is looking..." — live presence, no account required to show up.
   const [presence, setPresence] = useState([]); // [{ socketId, name }]
+  const [leaveToast, setLeaveToast] = useState(null);
+  const [celebrating, setCelebrating] = useState(false);
+  // The invite link's live window has passed (Collab Cart Complete Session
+  // UX Spec §1's "session stays live for" duration).
+  const [expired, setExpired] = useState(false);
 
   // --- Autopilot walkthrough script ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -247,11 +273,23 @@ export default function CollabCartPage({ overrideView }) {
   const audioChunksRef = useRef([]);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const celebratedItemRef = useRef(null);
 
 
 
   useEffect(() => {
     loadSession(effectiveGuest);
+  }, [token, effectiveUser, effectiveGuest]);
+
+  // Pre-join preview — runs specifically for the case loadSession skips
+  // (no account, no guest token yet), so the join screen can still say who
+  // actually invited them instead of a generic prompt.
+  useEffect(() => {
+    if (effectiveUser || effectiveGuest || !token) return;
+    collabApi.preview(token).then(data => {
+      if (data.expired) { setExpired(true); return; }
+      setOwnerName(data.ownerName);
+    }).catch(() => {});
   }, [token, effectiveUser, effectiveGuest]);
 
   useEffect(() => {
@@ -281,8 +319,16 @@ export default function CollabCartPage({ overrideView }) {
     socket.on('presence:join', ({ socketId, name }) => {
       setPresence(prev => prev.some(p => p.socketId === socketId) ? prev : [...prev, { socketId, name }]);
     });
-    socket.on('presence:leave', ({ socketId }) => {
-      setPresence(prev => prev.filter(p => p.socketId !== socketId));
+    socket.on('presence:leave', ({ socketId, name }) => {
+      setPresence(prev => {
+        const leaving = prev.find(p => p.socketId === socketId);
+        const label = leaving?.name || name;
+        if (label) {
+          setLeaveToast(`${label} left`);
+          setTimeout(() => setLeaveToast(null), 4000);
+        }
+        return prev.filter(p => p.socketId !== socketId);
+      });
     });
 
     socket.on('mission:deadlock', (payload) => setDeadlock(payload));
@@ -354,6 +400,8 @@ export default function CollabCartPage({ overrideView }) {
 
     socket.on('member:joined', (member) => {
       setMembers(prev => [...prev, member]);
+      setJoinToast(`${member.name || 'Someone'} just joined 👋`);
+      setTimeout(() => setJoinToast(null), 4500);
     });
 
     socket.on('cart:reconciled', () => { loadSession(); });
@@ -394,7 +442,9 @@ export default function CollabCartPage({ overrideView }) {
     try {
       if (effectiveUser) { try { await collabApi.join(token); } catch {} }
       const data = await collabApi.get(token, effectiveUser ? null : activeGuest);
+      if (data.expired) { setExpired(true); setLoading(false); return; }
       setMembers(data.members || []);
+      setOwnerName(data.ownerName || null);
 
       const sessionData = data.session || {};
       setAskMode(sessionData.ASK_MODE || sessionData.askMode || 'advisor');
@@ -459,7 +509,40 @@ export default function CollabCartPage({ overrideView }) {
   const currentItem = items[currentIndex];
   const images = currentItem?.product?.images || [];
   const currentItemJustSwapped = Boolean(currentItem && currentItem._justSwapped);
-  const productCardClassName = 'collab-product-card' + (currentItemJustSwapped ? ' item-swapped-flash' : '');
+  const isActualOwner = getIsActualOwner(mode, cart, missionInfo, effectiveUser);
+
+  const {
+    mySocketId, imageAreaRef,
+    currentViewers, currentReadBy, currentItemBursts, visibleCursors,
+    isSpotlit, iAmPresenter, iAmController,
+    typingName,
+    chatOpen, chatMessages, chatUnread, chatInput, setChatInput,
+    presenterName, followingPresenter,
+    spotlightToast,
+    controllerSocketId, controllerName, controlRequests,
+    swapOptions, swapOptionsLoading,
+    timelineOpen, timeline, timelineLoading,
+    screenRequests, sessionEnded,
+    handleImageMouseMove, handleEmojiBurst, emitTyping,
+    handleSendChat, toggleChat,
+    handleTogglePresenter, handleToggleFollow, handleSpotlight,
+    handleRequestControl, handleGrantControl, dismissControlRequest, handleRevokeControl,
+    handleRequestScreen, handleGrantScreen, dismissScreenRequest, handleEndSession,
+    handleOpenSwapOptions, handleControlSwap, cancelSwap,
+    handleOpenTimeline, closeTimeline,
+  } = useCollabPresence({
+    token, identity, items, currentItem, effectiveUser, effectiveGuest, presence,
+    onNavigate: (idx) => { setCurrentIndex(idx); setCurrentImageIndex(0); },
+  });
+
+  const productCardClassName = 'collab-product-card'
+    + (currentItemJustSwapped ? ' item-swapped-flash' : '')
+    + (isSpotlit ? ' item-spotlit' : '');
+
+  const handleCommentChange = (val) => {
+    setComment(val);
+    emitTyping();
+  };
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
@@ -489,6 +572,9 @@ export default function CollabCartPage({ overrideView }) {
 
   const handleReact = async (type, content = '') => {
     if (!currentItem) return;
+    // Ambient reaction float (Collab Cart Complete Session UX Spec §5) — a
+    // love tap floats up on everyone's screen live, not just the count.
+    if (type === 'love') handleEmojiBurst('❤️');
     try {
       if (mode === 'mission') {
         await collabApi.react(token, null, type, content, currentItem.missionSlotId, identity);
@@ -656,7 +742,29 @@ export default function CollabCartPage({ overrideView }) {
   ) || [];
   const allReactions = currentItem?.reactions || [];
 
+  // "Everyone agreed" (Collab Cart Complete Session UX Spec §5) — every
+  // currently-present reviewer has loved the item on screen. Fires once
+  // per item, not on every re-render.
+  useEffect(() => {
+    if (!currentItem || presence.length === 0) return;
+    const loveNames = new Set(allReactions.filter(r => r.type === 'love').map(r => r.user?.name));
+    const everyoneLoved = presence.every(p => loveNames.has(p.name));
+    if (!everyoneLoved) return;
+    if (celebratedItemRef.current === currentItem.id) return;
+    celebratedItemRef.current = currentItem.id;
+    setCelebrating(true);
+    setTimeout(() => setCelebrating(false), 2600);
+  }, [currentItem, allReactions, presence]);
+
   if (loading) return <div className="collab-loading"><div className="spinner" />Loading wardrobe...</div>;
+
+  if (expired) {
+    return <SessionEndScreen expired onBack={() => navigate(effectiveUser ? '/agent' : '/')} />;
+  }
+
+  if (sessionEnded) {
+    return <SessionEndScreen byName={sessionEnded.byName} onBack={() => navigate(effectiveUser ? '/agent' : '/')} />;
+  }
 
   // Zero-friction join (Section 3.2) — no account, just a name. The person
   // whose opinion was asked for should never hit a login wall to give it.
@@ -665,8 +773,8 @@ export default function CollabCartPage({ overrideView }) {
       <div className="collab-join-screen">
         <div className="collab-join-card">
           <span className="collab-join-emoji">👋</span>
-          <h2>Who's this?</h2>
-          <p>Someone wants your take on their wardrobe. No account needed — just your name.</p>
+          <h2>{ownerName ? `${ownerName} invited you!` : 'Who\'s this?'}</h2>
+          <p>{ownerName ? `${ownerName} wants your take on their wardrobe.` : 'Someone wants your take on their wardrobe.'} No account needed — just your name.</p>
           <input
             className="collab-join-input"
             placeholder="e.g. Mom, Rhea, Dad..."
@@ -720,15 +828,52 @@ export default function CollabCartPage({ overrideView }) {
         </div>
       </div>
 
-      {presence.length > 0 && (
-        <div className="collab-presence">
-          👀 {presence.map(p => p.name).join(', ')} {presence.length === 1 ? 'is' : 'are'} looking right now
-        </div>
+      {/* Live top bar (Collab Cart Complete Session UX Spec §3a) */}
+      <PresenceBar presence={presence} hasOwnerish={isActualOwner} onEndSession={handleEndSession} />
+
+      <LiveActionRail chatUnread={chatUnread} onToggleChat={toggleChat} onOpenTimeline={handleOpenTimeline} />
+
+      {/* Sharing controls — owner gets the four-button panel (§3c), joiner
+          gets the mirrored request buttons (§4b). Mode is 'cart'-only:
+          mission/Wedding-Matrix collab keeps its existing council flow. */}
+      {mode === 'cart' && (
+        isActualOwner ? (
+          <SharingControlsPanel
+            iAmPresenter={iAmPresenter} onToggleScreen={handleTogglePresenter}
+            presence={presence} controllerSocketId={controllerSocketId} controllerName={controllerName}
+            onGrantControl={handleGrantControl} onRevokeControl={handleRevokeControl}
+            isSpotlit={isSpotlit} onSpotlight={handleSpotlight} hasCurrentItem={Boolean(currentItem)}
+            onAskToVote={handleOpenVote} voteLoading={voteLoading}
+          />
+        ) : (
+          <JoinerControlsPanel
+            presenterName={presenterName} followingPresenter={followingPresenter} onToggleFollow={handleToggleFollow}
+            onRequestScreen={handleRequestScreen}
+            iAmController={iAmController} controllerName={controllerName}
+            onRequestControl={handleRequestControl} onRevokeControl={handleRevokeControl}
+          />
+        )
       )}
+
+      <LiveBanners
+        controlRequests={controlRequests} onGrantControl={handleGrantControl} onDismissRequest={dismissControlRequest}
+        screenRequests={screenRequests} onGrantScreen={handleGrantScreen} onDismissScreenRequest={dismissScreenRequest}
+        spotlightToast={spotlightToast}
+      />
 
       {loopGuardMessage && (
         <div className="matrix-loopguard-toast">⏸ {loopGuardMessage}</div>
       )}
+
+      {joinToast && (
+        <div className="join-toast">🎉 {joinToast}</div>
+      )}
+
+      {leaveToast && (
+        <div className="leave-toast">👋 {leaveToast}</div>
+      )}
+
+      <CelebrationBurst show={celebrating} />
 
       {/* APPROVER — the Payer Lock (Five Modes). Mom is a CFO and a risk
           officer, not a stylist — one number, one tap, not thirty items to
@@ -863,7 +1008,18 @@ export default function CollabCartPage({ overrideView }) {
           onTouchEnd={handleTouchEnd}
         >
           {/* Image area */}
-          <div className="collab-image-area">
+          <div
+            className="collab-image-area"
+            ref={imageAreaRef}
+            onMouseMove={handleImageMouseMove}
+            onTouchMove={handleImageMouseMove}
+          >
+            <LiveOverlay
+              visibleCursors={visibleCursors}
+              currentViewers={currentViewers}
+              bursts={currentItemBursts}
+            />
+
             {images.length > 0 ? (
               <img
                 src={images[currentImageIndex]}
@@ -951,6 +1107,15 @@ export default function CollabCartPage({ overrideView }) {
               )}
             </div>
 
+            <EngagementBar
+              onBurst={handleEmojiBurst}
+              currentReadBy={currentReadBy}
+              iAmController={iAmController} mode={mode}
+              swapOptions={swapOptions} swapOptionsLoading={swapOptionsLoading}
+              onOpenSwapOptions={handleOpenSwapOptions} onControlSwap={handleControlSwap}
+              onCancelSwap={cancelSwap}
+            />
+
             {/* ADVISOR — live vote (Five Modes). "Which one?" not "how
                 much?" — a different question, judged by people who aren't
                 paying and have no veto, so it stays fun, not a chore. */}
@@ -1012,11 +1177,12 @@ export default function CollabCartPage({ overrideView }) {
               </div>
             )}
 
+            {typingName && <p className="typing-indicator-line">{typingName} is typing…</p>}
             <div className="comment-row">
               <input
                 className="comment-input"
                 value={comment}
-                onChange={e => setComment(e.target.value)}
+                onChange={e => handleCommentChange(e.target.value)}
                 placeholder={mode === 'mission' ? "Why? e.g. 'too bright, something darker'" : "Add a comment..."}
                 onKeyDown={e => e.key === 'Enter' && handleComment()}
               />
@@ -1085,6 +1251,25 @@ export default function CollabCartPage({ overrideView }) {
       <p className="collab-async-note">
         Take your time — {mode === 'mission' ? 'the wedding wardrobe' : 'the cart'} won't wait on any one reply, and every reaction updates it the moment you send it.
       </p>
+
+      {chatOpen && (
+        <ChatPanel
+          mySocketId={mySocketId}
+          chatMessages={chatMessages}
+          chatInput={chatInput} setChatInput={setChatInput}
+          onSend={handleSendChat} onClose={toggleChat}
+        />
+      )}
+
+      {timelineOpen && (
+        <TimelinePanel
+          loading={timelineLoading}
+          timeline={timeline}
+          onClose={closeTimeline}
+          canCheckout={Boolean(isActualOwner && mode === 'cart' && cart?.id)}
+          onCheckout={() => navigate(`/cart/${cart?.id}`)}
+        />
+      )}
 
       {/* DEMO ASSIST DRAWER PANEL */}
       {user && user.email === 'demo_user@styleos.test' && !autopilot && (

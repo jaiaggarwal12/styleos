@@ -7,7 +7,7 @@ import { nFormatter , isInWishList , isInBag } from '../../helpers/general';
 import { addItemToBag , setSize} from '../../actions/bag';
 import { openModal } from '../../actions/modals';
 export default function ProductDetailsContainer({product}) {
-    const sizes=[38,40,42,44,46];
+    const sizes = product.sizes && product.sizes.length > 0 ? product.sizes : ['S', 'M', 'L', 'XL'];
     const dispatch = useDispatch();
     const {wishlist , bag} = useSelector(state => {
         return {

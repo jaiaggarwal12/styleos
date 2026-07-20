@@ -112,6 +112,75 @@
     top : -25px;
     right : 5px;
 }
+.quick-add-button{
+    height : 30px;
+    width : 90%;
+    margin: 10px auto;
+    background-color: var(--pink, #ff3f6c);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+}
+.quick-add-button.added{
+    background-color: #fff;
+    color: #16a34a;
+    border: 1px solid #16a34a;
+    cursor: default;
+}
+.quick-size-sheet-backdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 999;
+}
+.quick-size-sheet{
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 14px 14px 0 0;
+    padding: 18px 16px 24px;
+    animation: quickSheetUp 0.22s ease;
+}
+@keyframes quickSheetUp{
+    from{ transform: translateY(100%); }
+    to{ transform: translateY(0); }
+}
+.quick-size-sheet-title{
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0 0 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.quick-size-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.quick-size-chip{
+    min-width: 46px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.quick-size-chip:hover{
+    border-color: var(--pink, #ff3f6c);
+    color: var(--pink, #ff3f6c);
+}
 .view-similar-mobile-button{
     display : none;
 }

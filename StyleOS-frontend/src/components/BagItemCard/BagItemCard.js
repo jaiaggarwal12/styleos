@@ -10,7 +10,7 @@ export default function BagItemCard({ item }) {
     const wishlist = useSelector(state => state.wishlistStore);
     console.log(item);
     let isWishListed = isInWishList( wishlist,item )
-    const sizes=[38,40,42,44,46];
+    const sizes = item.sizes && item.sizes.length > 0 ? item.sizes : ['S', 'M', 'L', 'XL'];
     return (
         <div className="bag-item-card"  >
             <Link to={`/product/${item.id}`}>

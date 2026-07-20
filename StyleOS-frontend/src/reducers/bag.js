@@ -25,7 +25,11 @@ export default function bag(state = defaultBagState, action) {
         case REMOVE_FROM_BAG:
             return state.filter(item => item.id !== action.item.id);
         case EMPTY_BAG:
-            window.alert('Checkout Successful');
+            // No blocking alert() here — a reducer firing a native dialog
+            // mid-dispatch was interrupting the React Router navigation
+            // that follows checkout, landing on a blank page until a
+            // manual refresh. Navigating to the real cart page (see
+            // BagContainer.js's checkOutHandler) is confirmation enough.
             return [];
         case SET_QUANTITY:
             return state.map(item => {

@@ -169,7 +169,7 @@ const CartItem = {
 // react/comment flow, so every pre-existing collab link keeps behaving
 // exactly as it always has.
 const CollabSession = {
-  async create({ cartId, missionId, shareToken, askMode, recipientName, recipientRelation }) {
+  async create({ cartId, missionId, shareToken, askMode, recipientName, recipientRelation, expiresAt }) {
     const id = uuidv4();
     // Bind variable is named :amode, not :mode — Oracle's SQL parser treats
     // MODE as a reserved keyword (used in LOCK TABLE ... MODE and older
@@ -177,12 +177,13 @@ const CollabSession = {
     // host/bind variable name" even though `mode` is a perfectly normal
     // column/JS variable name everywhere else.
     await query(
-      `INSERT INTO collab_sessions (id, cart_id, mission_id, share_token, ask_mode, recipient_name, recipient_relation, created_at, updated_at)
-       VALUES (:id, :cid, :mid, :token, :amode, :rname, :rrel, SYSTIMESTAMP, SYSTIMESTAMP)`,
+      `INSERT INTO collab_sessions (id, cart_id, mission_id, share_token, ask_mode, recipient_name, recipient_relation, expires_at, created_at, updated_at)
+       VALUES (:id, :cid, :mid, :token, :amode, :rname, :rrel, :expiresAt, SYSTIMESTAMP, SYSTIMESTAMP)`,
       { id, cid: cartId || null, mid: missionId || null, token: shareToken,
-        amode: askMode || 'advisor', rname: recipientName || null, rrel: recipientRelation || null }
+        amode: askMode || 'advisor', rname: recipientName || null, rrel: recipientRelation || null,
+        expiresAt: expiresAt || null }
     );
-    return { id, cartId, missionId, shareToken, askMode: askMode || 'advisor' };
+    return { id, cartId, missionId, shareToken, askMode: askMode || 'advisor', expiresAt: expiresAt || null };
   },
   async findByToken(shareToken) {
     const r = await query(`SELECT * FROM collab_sessions WHERE share_token = :t`, { t: shareToken });

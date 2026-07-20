@@ -211,6 +211,14 @@ router.post('/wedding/:id/orchestrate', auth, async (req, res) => {
     const memberById = Object.fromEntries(members.map(m => [m.id, m]));
     const community = mission.COMMUNITY || mission.community;
 
+    // resolveSlot's deterministic "highest-rated match" query returns the
+    // SAME product for any two slots with matching criteria (same event,
+    // gender, palette, budget bucket) unless told otherwise — without
+    // tracking what's already been picked, every member with a similar
+    // profile got handed the identical outfit. Seed from slots already
+    // filled by an earlier run so a retry doesn't start reusing them either.
+    const usedProductIds = slots.filter(s => s.status === 'filled' && s.productId).map(s => s.productId);
+
     res.json({ started: true, slotCount: slots.length });
 
     // Fire-and-forget: stream fills live over the socket, paced so the
@@ -237,9 +245,11 @@ router.post('/wedding/:id/orchestrate', auth, async (req, res) => {
         const result = await resolveSlot({
           community, eventName: ev.name, palette: ev.paletteFamily,
           member: mem, allocatedBudget: slot.allocatedBudget,
+          excludeIds: usedProductIds,
         });
 
         if (result) {
+          usedProductIds.push(result.product.ID);
           await MissionSlot.update(slot.id, { productId: result.product.ID, status: 'filled', relaxationNote: result.note });
           if (req.io) req.io.to(`mission_${mission.id}`).emit('mission:slot_filled', {
             slotId: slot.id, eventId: ev.id, memberId: mem.id,
@@ -451,6 +461,14 @@ async function rejectAndReharmonizeSlot({ missionId, eventId, memberId, reason, 
     // different shade.
     const { isQuality } = classifyObjection(reason);
 
+    // Track every product already worn by anyone else in this mission —
+    // resolveSlot's deterministic top-rated-match query otherwise hands
+    // the same product to two members with similar profiles (same fix as
+    // the orchestrate loop above). Seeded from every slot's CURRENT pick,
+    // so a re-solved slot can't collide with a sibling that isn't being
+    // touched this round either.
+    const usedProductIds = slots.filter(s => s.productId).map(s => s.productId);
+
     // Re-solve the rejected slot — tabu (all past rejections for this
     // slot, not just the immediate one) and learned constraints are now
     // hard filters, so this search is provably smaller than the last one.
@@ -458,11 +476,13 @@ async function rejectAndReharmonizeSlot({ missionId, eventId, memberId, reason, 
       community, eventName: ev.name, palette: shiftedPalette,
       member: rejectedMember, allocatedBudget: rejectedSlot.allocatedBudget,
       upgrade: isQuality, learnedConstraints, escalationLevel,
+      excludeIds: usedProductIds,
     });
 
     const changed = [];   // genuinely different products — the honest count
     const settled = [];   // every cell that needs a visual settle event
     if (primary) {
+      usedProductIds.push(primary.product.ID);
       await MissionSlot.update(rejectedSlot.id, { productId: primary.product.ID, status: 'filled', relaxationNote: primary.note });
       changed.push({ slotId: rejectedSlot.id, eventId: ev.id, memberId, product: primary.product, note: primary.note });
       settled.push({ slotId: rejectedSlot.id, eventId: ev.id, memberId, product: primary.product, note: primary.note, kept: false });
@@ -486,9 +506,10 @@ async function rejectAndReharmonizeSlot({ missionId, eventId, memberId, reason, 
       const result = await resolveSlot({
         community, eventName: ev.name, palette: shiftedPalette,
         member: mem, allocatedBudget: slot.allocatedBudget,
-        excludeIds: slot.productId ? [slot.productId] : [],
+        excludeIds: usedProductIds,
       });
       if (result && result.product.ID !== slot.productId) {
+        usedProductIds.push(result.product.ID);
         await MissionSlot.update(slot.id, { productId: result.product.ID, status: 'filled', relaxationNote: result.note });
         changed.push({ slotId: slot.id, eventId: ev.id, memberId: mem.id, product: result.product, note: result.note });
         settled.push({ slotId: slot.id, eventId: ev.id, memberId: mem.id, product: result.product, note: result.note, kept: false });

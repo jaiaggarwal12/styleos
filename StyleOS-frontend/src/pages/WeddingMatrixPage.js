@@ -89,7 +89,7 @@ export default function WeddingMatrixPage({ overrideView }) {
       const mem = members.find(m => m.name === 'Sneha (Sister)');
       if (!ev || !mem) return;
 
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 10000));
       updateToast("👩‍🦱 Simulating Sister Sneha rejecting Mehendi Kurta (₹1,296)...");
       try {
         await missionApi.rejectSlot(id, ev.id, mem.id, 'too plain, looks cheap', 'Sneha (Sister)');

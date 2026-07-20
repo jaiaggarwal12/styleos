@@ -31,5 +31,13 @@ export function normalizeProduct(p) {
     articleType: p.ARTICLE_TYPE || p.articleType || 'Tshirts',
     occasion: p.OCCASION || p.occasion || 'Casual',
     price: p.PRICE || p.price,
+    sizes: (() => {
+      const raw = p.SIZES || p.sizes;
+      if (Array.isArray(raw)) return raw;
+      try {
+        const parsed = JSON.parse(raw || '[]');
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : ['S', 'M', 'L', 'XL'];
+      } catch { return ['S', 'M', 'L', 'XL']; }
+    })(),
   };
 }

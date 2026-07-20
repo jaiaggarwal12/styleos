@@ -55,8 +55,8 @@ export const cart = {
   create: (name, goalText) =>
     request('/cart', { method: 'POST', body: JSON.stringify({ name, goalText }) }),
   get: (id) => request(`/cart/${id}`),
-  addItem: (cartId, productId, size) =>
-    request(`/cart/${cartId}/items`, { method: 'POST', body: JSON.stringify({ productId, size }) }),
+  addItem: (cartId, productId, size, quantity) =>
+    request(`/cart/${cartId}/items`, { method: 'POST', body: JSON.stringify({ productId, size, quantity }) }),
   removeItem: (cartId, itemId) =>
     request(`/cart/${cartId}/items/${itemId}`, { method: 'DELETE' }),
   approve: (cartId) =>
@@ -99,10 +99,12 @@ function guestHeaders(guest) {
 }
 
 export const collab = {
-  create: (cartId, askMode, recipientName, recipientRelation) =>
-    request(`/collab/create/${cartId}`, { method: 'POST', body: JSON.stringify({ askMode, recipientName, recipientRelation }) }),
+  create: (cartId, askMode, recipientName, recipientRelation, durationHours) =>
+    request(`/collab/create/${cartId}`, { method: 'POST', body: JSON.stringify({ askMode, recipientName, recipientRelation, durationHours }) }),
 
   createForMission: (missionId) => request(`/collab/mission/create/${missionId}`, { method: 'POST' }),
+
+  preview: (token) => request(`/collab/${token}/preview`),
 
   guestJoin: (token, name) =>
     request(`/collab/${token}/guest-join`, { method: 'POST', body: JSON.stringify({ name }) }),
@@ -141,6 +143,17 @@ export const collab = {
     request(`/collab/${token}/reconcile`, { method: 'POST', headers: guestHeaders(guest) }),
 
   myInvites: () => request('/collab/my/invites'),
+
+  // Tier 4 — co-editing. Only meaningful once a guest holds floor control
+  // (granted live via sockets, see control:grant in services/socket.js).
+  controlSwap: (token, cartItemId, newProductId, guest) =>
+    request(`/collab/${token}/control-swap`, {
+      method: 'POST', headers: guestHeaders(guest), body: JSON.stringify({ cartItemId, newProductId }),
+    }),
+
+  // Tier 6 — session replay, built only from what's actually persisted.
+  timeline: (token, guest) =>
+    request(`/collab/${token}/timeline`, { headers: guestHeaders(guest) }),
 
   // APPROVER — the Payer Lock (Five Modes)
   setPayerLock: (token, budgetLock, itemPriceCap, detailLevel, guest) =>
