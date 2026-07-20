@@ -132,15 +132,19 @@ async function resolveSlot({ community, eventName, palette, member, allocatedBud
       { types: ['Kurtas'], colours: null, budgetMult: 1.3, note: `Not many ${types[0]} left in range — went with a formal Kurta` },
     ];
   } else {
+    // Palette is a hard rule during normal (non-escalated) fills — never
+    // silently drop it just to fill a slot. Widening the garment TYPE
+    // (e.g. to a Kurta) is fine; drifting the COLOR off the event's
+    // predefined palette is not. If nothing fits even after widening
+    // type, this correctly returns null and the caller shows an honest
+    // shortfall instead of a wrong-color pick.
     attempts = upgrade ? [
       { types, colours: palette, budgetMult: 1.3, note: 'Moved to a higher-rated option within the remaining budget' },
-      { types, colours: null, budgetMult: 1.3, note: 'Moved to a higher-rated pick — color drifted from the palette to fit' },
-      { types: ['Kurtas'], colours: null, budgetMult: 1.4, note: 'Went with a higher-rated formal Kurta instead' },
+      { types: ['Kurtas'], colours: palette, budgetMult: 1.4, note: 'Went with a higher-rated formal Kurta instead, same palette' },
     ] : [
       { types, colours: palette, budgetMult: 1.0, note: null },
       { types, colours: palette, budgetMult: 1.2, note: 'Stretched the budget a little for this one' },
-      { types, colours: null, budgetMult: 1.2, note: 'Closest style match — color drifted from the palette' },
-      { types: ['Kurtas'], colours: null, budgetMult: 1.3, note: `Not many ${types[0]} in stock — went with a formal Kurta instead` },
+      { types: ['Kurtas'], colours: palette, budgetMult: 1.3, note: `Not many ${types[0]} in stock — went with a formal Kurta instead, same palette` },
     ];
   }
 

@@ -854,6 +854,21 @@ router.post('/finalize', auth, async (req, res) => {
 
     const updatedCart = await Cart.findById(cartId);
     const cartTotal = updatedCart?.TOTAL_PRICE || 0;
+
+    // A1 — carts built through Kiya must auto-save to Wardrobe, no manual
+    // step. Idempotent: finalize can be called more than once for the same
+    // cart (re-optimizing, revisiting), and must never create duplicates.
+    try {
+      const existing = await Wardrobe.findByCart(cartId);
+      if (!existing) {
+        await Wardrobe.create({
+          userId: req.user.id, cartId, name: cart.NAME || cart.name || 'My Wardrobe',
+          outfitCombinations: outfits, totalItems: items.length, totalPrice: cartTotal,
+        });
+      }
+    } catch (wardrobeErr) {
+      console.error('Auto-save to wardrobe failed (non-fatal):', wardrobeErr.message);
+    }
     const budgetInfo = statedBudget
       ? { totalBudget: statedBudget, remaining: budgetRemaining([{ price: cartTotal, quantity: 1 }], statedBudget), status: budgetStatus([{ price: cartTotal, quantity: 1 }], statedBudget) }
       : null;

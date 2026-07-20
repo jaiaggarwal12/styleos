@@ -339,6 +339,10 @@ const Wardrobe = {
     const r = await query(`SELECT * FROM wardrobes WHERE user_id = :wardrobeUid ORDER BY created_at DESC`, { wardrobeUid: userId });
     return r.rows || [];
   },
+  async findByCart(cartId) {
+    const r = await query(`SELECT * FROM wardrobes WHERE cart_id = :cid`, { cid: cartId });
+    return r.rows?.[0] || null;
+  },
   async findOwnedItems(userId) {
     const r = await query(
       `SELECT w.name as wardrobe_name, p.article_type, p.base_colour, p.title

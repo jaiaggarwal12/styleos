@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const auth = require('../middleware/auth');
-const { Cart, CartItem, Product, CollabSession, Goal } = require('../models');
+const { Cart, CartItem, Product, CollabSession, Goal, Wardrobe } = require('../models');
 const { logShipment } = require('../services/venue_memory');
 const { ownsCart } = require('../middleware/ownership');
 
@@ -91,6 +91,21 @@ router.post('/:id/approve', auth, async (req, res) => {
 
     await Cart.updateStatus(req.params.id, 'approved');
     const updated = await Cart.findById(req.params.id);
+
+    // A1 — approving a cart (the Bag/browsing path's equivalent of Kiya's
+    // finalize) must also auto-save to Wardrobe. Idempotent, same as agent.js.
+    try {
+      const existingWardrobe = await Wardrobe.findByCart(req.params.id);
+      if (!existingWardrobe) {
+        const approvedItems = await CartItem.findByCart(req.params.id);
+        await Wardrobe.create({
+          userId: req.user.id, cartId: req.params.id, name: updated?.NAME || updated?.name || 'My Wardrobe',
+          outfitCombinations: [], totalItems: approvedItems.length, totalPrice: updated?.TOTAL_PRICE || 0,
+        });
+      }
+    } catch (wardrobeErr) {
+      console.error('Auto-save to wardrobe failed (non-fatal):', wardrobeErr.message);
+    }
 
     // Repetition-avoidance memory (Part 2 Page 56) — log what shipped to
     // this venue at the one checkpoint that means the purchase actually

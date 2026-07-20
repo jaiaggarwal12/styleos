@@ -56,5 +56,46 @@
     .bag-action{
         position : fixed;
         bottom : 0px;
-    }    
+    }
+}
+
+/* A4 — past carts stay visible in the Bag after checkout, not lost. */
+.bag-history-section {
+    width: 100%;
+    padding: 16px 20px 0;
+    border-top: 1px solid #eee;
+    margin-top: 12px;
+}
+.bag-history-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 10px;
+}
+.bag-history-loading {
+    color: #999;
+    font-size: 0.9rem;
+}
+.bag-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    text-decoration: none;
+    color: inherit;
+}
+.bag-history-row:hover {
+    background-color: #fafafa;
+}
+.bag-history-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #1f1f1f;
+}
+.bag-history-meta {
+    font-size: 0.82rem;
+    color: #6b7280;
 }

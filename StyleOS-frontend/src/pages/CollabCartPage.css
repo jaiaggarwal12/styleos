@@ -657,6 +657,16 @@
 .timeline-resume-note { font-size: 0.76rem; color: var(--ink-3); text-align: center; margin: 16px 0 10px; }
 .timeline-checkout-btn { width: 100%; }
 
+/* Review mode (A3) — the default state before anyone opts into a live
+   session. Deliberately calm, not "live"-styled. */
+.review-mode-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 12px 16px; padding: 12px 14px; background: var(--bg-3);
+  border: 1.5px solid var(--line); border-radius: 12px;
+}
+.review-mode-label { font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+.review-mode-cta { flex-shrink: 0; padding: 9px 16px; font-size: 0.82rem; }
+
 /* ── Collab Cart Complete Session UX Spec — presence bar, sharing
    controls, joiner controls, session end, celebration ─────────────────── */
 

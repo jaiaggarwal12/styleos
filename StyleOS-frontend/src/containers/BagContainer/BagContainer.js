@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './BagContainer.css';
 import {BagItemCard , Empty} from '../../components/index';
 import {emptyBag} from '../../actions/bag';
@@ -15,6 +15,21 @@ export default function BagContainer() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [creatingCart, setCreatingCart] = useState(false);
+    // A4 — checkout empties the in-progress selection (it's been turned
+    // into a real cart), but past carts must stay reachable from the Bag,
+    // not vanish. Sourced from the real backend, same records Collab reads,
+    // so both surfaces show the same history.
+    const [pastCarts, setPastCarts] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        setLoadingHistory(true);
+        cartApi.list()
+            .then(carts => setPastCarts(Array.isArray(carts) ? carts : []))
+            .catch(console.error)
+            .finally(() => setLoadingHistory(false));
+    }, [user, bag.length]);
 
     // "Checkout" here means: turn the local bag into a REAL backend cart —
     // the same cart_id Kiya-built carts use — so it can generate a Squad
@@ -68,6 +83,32 @@ export default function BagContainer() {
                     )
                 })
             }
+            {user && (pastCarts.length > 0 || loadingHistory) && (
+                <div className="bag-history-section">
+                    <p className="bag-history-title">Your carts</p>
+                    {loadingHistory ? (
+                        <p className="bag-history-loading">Loading...</p>
+                    ) : (
+                        pastCarts.map(c => {
+                            const cid = c.ID || c.id;
+                            const name = c.NAME || c.name || 'My Bag';
+                            const total = c.TOTAL_PRICE || c.totalPrice || 0;
+                            const itemCount = (c.items || []).reduce((s, it) => s + (it.QUANTITY || it.quantity || 1), 0);
+                            return (
+                                <Link
+                                    to={`/cart/${cid}`}
+                                    key={cid}
+                                    className="bag-history-row"
+                                    onClick={() => dispatch(closeModal())}
+                                >
+                                    <span className="bag-history-name">{name}</span>
+                                    <span className="bag-history-meta">{itemCount} item{itemCount === 1 ? '' : 's'} · ₹{total.toLocaleString('en-IN')}</span>
+                                </Link>
+                            );
+                        })
+                    )}
+                </div>
+            )}
             <div className="bag-action" >
                 <div className="total-amount center" >
                     <p>₹ { findTotal(bag) }</p>

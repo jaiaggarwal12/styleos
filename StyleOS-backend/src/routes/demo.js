@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { Cart, CartItem, CollabSession, CollabMember, Reaction, Goal, Wardrobe, Mission, MissionEvent, MissionMember, MissionSlot, Party, PartyMember, User } = require('../models');
 const { query } = require('../db');
+const { defaultPalette } = require('../services/mission_config');
 
 function signToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -234,9 +235,9 @@ router.post('/seed', async (req, res) => {
       const mId = mission.id;
 
       // Seed Events
-      const eMehendi = await MissionEvent.createMany(mId, [{ name: 'Mehendi', paletteFamily: ['Green', 'Yellow', 'Mustard'] }]);
-      const eSangeet = await MissionEvent.createMany(mId, [{ name: 'Sangeet', paletteFamily: ['Blue', 'Purple', 'Pink'] }]);
-      const eWedding = await MissionEvent.createMany(mId, [{ name: 'Wedding', paletteFamily: ['Red', 'Maroon', 'Gold', 'Black'] }]);
+      const eMehendi = await MissionEvent.createMany(mId, [{ name: 'Mehendi', paletteFamily: defaultPalette('Mehendi') }]);
+      const eSangeet = await MissionEvent.createMany(mId, [{ name: 'Sangeet', paletteFamily: defaultPalette('Sangeet') }]);
+      const eWedding = await MissionEvent.createMany(mId, [{ name: 'Wedding', paletteFamily: defaultPalette('Wedding') }]);
 
       // Seed Members
       const mDad = await MissionMember.createMany(mId, [{ name: 'Dad', roleWeight: 1.5, gender: 'Men', ageBracket: 'adult' }]);
@@ -465,9 +466,9 @@ router.post('/seed-all', async (req, res) => {
       city: 'Delhi',
     });
     const mId = mission.id;
-    const eMehendi = await MissionEvent.createMany(mId, [{ name: 'Mehendi', paletteFamily: ['Green', 'Yellow', 'Mustard'] }]);
-    const eSangeet = await MissionEvent.createMany(mId, [{ name: 'Sangeet', paletteFamily: ['Blue', 'Purple', 'Pink'] }]);
-    const eWedding = await MissionEvent.createMany(mId, [{ name: 'Wedding', paletteFamily: ['Red', 'Maroon', 'Gold', 'Black'] }]);
+    const eMehendi = await MissionEvent.createMany(mId, [{ name: 'Mehendi', paletteFamily: defaultPalette('Mehendi') }]);
+    const eSangeet = await MissionEvent.createMany(mId, [{ name: 'Sangeet', paletteFamily: defaultPalette('Sangeet') }]);
+    const eWedding = await MissionEvent.createMany(mId, [{ name: 'Wedding', paletteFamily: defaultPalette('Wedding') }]);
     const mDad = await MissionMember.createMany(mId, [{ name: 'Dad', roleWeight: 1.5, gender: 'Men', ageBracket: 'adult' }]);
     const mMom = await MissionMember.createMany(mId, [{ name: 'Mom', roleWeight: 1.5, gender: 'Women', ageBracket: 'adult' }]);
     const mRohan = await MissionMember.createMany(mId, [{ name: 'Rohan (Groom)', roleWeight: 2.0, gender: 'Men', ageBracket: 'adult' }]);

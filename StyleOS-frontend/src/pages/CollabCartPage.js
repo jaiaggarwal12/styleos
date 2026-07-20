@@ -90,6 +90,12 @@ export default function CollabCartPage({ overrideView }) {
 
   const items = mode === 'mission' ? slotItems : (cart?.items || []);
   const autopilot = urlParams.get('autopilot') === 'true';
+  // A3 — a shared link lands in review mode by default; the live session
+  // (presence, sharing controls, chat, everything socket-driven) only
+  // starts once someone explicitly opts in. The autopilot demo script is
+  // the one deliberate exception — it's meant to show the live session
+  // without a manual click.
+  const [liveSessionActive, setLiveSessionActive] = useState(autopilot);
   const updateToast = (msg) => {
     window.dispatchEvent(new CustomEvent('autopilot:toast', { detail: msg }));
   };
@@ -297,7 +303,7 @@ export default function CollabCartPage({ overrideView }) {
   }, [currentIndex]);
 
   useEffect(() => {
-    if (!token || (!effectiveUser && !effectiveGuest)) return;
+    if (!token || (!effectiveUser && !effectiveGuest) || !liveSessionActive) return;
 
     const socket = getSocket();
     if (!socket.connected) {
@@ -427,7 +433,7 @@ export default function CollabCartPage({ overrideView }) {
       socket.off('mission:slot_filled');
       socket.off('mission:orchestrate_done');
     };
-  }, [effectiveUser, effectiveGuest, token, mode, missionInfo]);
+  }, [effectiveUser, effectiveGuest, token, mode, missionInfo, liveSessionActive]);
 
   async function loadSession(guestOverride) {
     setLoading(true);
@@ -828,52 +834,66 @@ export default function CollabCartPage({ overrideView }) {
         </div>
       </div>
 
-      {/* Live top bar (Collab Cart Complete Session UX Spec §3a) */}
-      <PresenceBar presence={presence} hasOwnerish={isActualOwner} onEndSession={handleEndSession} />
+      {/* A3 — review mode by default. Nobody is dropped into a live session
+          just by opening the link; starting/joining one is a deliberate,
+          visible choice on both sides. The product review below (swipe,
+          love/skip/comment/voice) works the same either way. */}
+      {liveSessionActive ? (
+        <>
+          <PresenceBar presence={presence} hasOwnerish={isActualOwner} onEndSession={handleEndSession} />
 
-      <LiveActionRail chatUnread={chatUnread} onToggleChat={toggleChat} onOpenTimeline={handleOpenTimeline} />
+          <LiveActionRail chatUnread={chatUnread} onToggleChat={toggleChat} onOpenTimeline={handleOpenTimeline} />
 
-      {/* Sharing controls — owner gets the four-button panel (§3c), joiner
-          gets the mirrored request buttons (§4b). Mode is 'cart'-only:
-          mission/Wedding-Matrix collab keeps its existing council flow. */}
-      {mode === 'cart' && (
-        isActualOwner ? (
-          <SharingControlsPanel
-            iAmPresenter={iAmPresenter} onToggleScreen={handleTogglePresenter}
-            presence={presence} controllerSocketId={controllerSocketId} controllerName={controllerName}
-            onGrantControl={handleGrantControl} onRevokeControl={handleRevokeControl}
-            isSpotlit={isSpotlit} onSpotlight={handleSpotlight} hasCurrentItem={Boolean(currentItem)}
-            onAskToVote={handleOpenVote} voteLoading={voteLoading}
+          {/* Sharing controls — owner gets the four-button panel (§3c), joiner
+              gets the mirrored request buttons (§4b). Mode is 'cart'-only:
+              mission/Wedding-Matrix collab keeps its existing council flow. */}
+          {mode === 'cart' && (
+            isActualOwner ? (
+              <SharingControlsPanel
+                iAmPresenter={iAmPresenter} onToggleScreen={handleTogglePresenter}
+                presence={presence} controllerSocketId={controllerSocketId} controllerName={controllerName}
+                onGrantControl={handleGrantControl} onRevokeControl={handleRevokeControl}
+                isSpotlit={isSpotlit} onSpotlight={handleSpotlight} hasCurrentItem={Boolean(currentItem)}
+                onAskToVote={handleOpenVote} voteLoading={voteLoading}
+              />
+            ) : (
+              <JoinerControlsPanel
+                presenterName={presenterName} followingPresenter={followingPresenter} onToggleFollow={handleToggleFollow}
+                onRequestScreen={handleRequestScreen}
+                iAmController={iAmController} controllerName={controllerName}
+                onRequestControl={handleRequestControl} onRevokeControl={handleRevokeControl}
+              />
+            )
+          )}
+
+          <LiveBanners
+            controlRequests={controlRequests} onGrantControl={handleGrantControl} onDismissRequest={dismissControlRequest}
+            screenRequests={screenRequests} onGrantScreen={handleGrantScreen} onDismissScreenRequest={dismissScreenRequest}
+            spotlightToast={spotlightToast}
           />
-        ) : (
-          <JoinerControlsPanel
-            presenterName={presenterName} followingPresenter={followingPresenter} onToggleFollow={handleToggleFollow}
-            onRequestScreen={handleRequestScreen}
-            iAmController={iAmController} controllerName={controllerName}
-            onRequestControl={handleRequestControl} onRevokeControl={handleRevokeControl}
-          />
-        )
+
+          {loopGuardMessage && (
+            <div className="matrix-loopguard-toast">⏸ {loopGuardMessage}</div>
+          )}
+
+          {joinToast && (
+            <div className="join-toast">🎉 {joinToast}</div>
+          )}
+
+          {leaveToast && (
+            <div className="leave-toast">👋 {leaveToast}</div>
+          )}
+
+          <CelebrationBurst show={celebrating} />
+        </>
+      ) : (
+        <div className="review-mode-banner">
+          <span className="review-mode-label">📋 Review mode — swipe, react, and comment below</span>
+          <button className="btn-collab review-mode-cta" onClick={() => setLiveSessionActive(true)}>
+            🎥 {isActualOwner ? 'Start' : 'Join'} Live Session
+          </button>
+        </div>
       )}
-
-      <LiveBanners
-        controlRequests={controlRequests} onGrantControl={handleGrantControl} onDismissRequest={dismissControlRequest}
-        screenRequests={screenRequests} onGrantScreen={handleGrantScreen} onDismissScreenRequest={dismissScreenRequest}
-        spotlightToast={spotlightToast}
-      />
-
-      {loopGuardMessage && (
-        <div className="matrix-loopguard-toast">⏸ {loopGuardMessage}</div>
-      )}
-
-      {joinToast && (
-        <div className="join-toast">🎉 {joinToast}</div>
-      )}
-
-      {leaveToast && (
-        <div className="leave-toast">👋 {leaveToast}</div>
-      )}
-
-      <CelebrationBurst show={celebrating} />
 
       {/* APPROVER — the Payer Lock (Five Modes). Mom is a CFO and a risk
           officer, not a stylist — one number, one tap, not thirty items to
