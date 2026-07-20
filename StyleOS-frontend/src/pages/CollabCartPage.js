@@ -383,25 +383,7 @@ export default function CollabCartPage({ overrideView }) {
 
     socket.on('reaction:new', (reaction) => {
       scrollToViewportBottom();
-      if (mode === 'mission') {
-        setSlotItems(prev => prev.map(it =>
-          it.id === reaction.missionSlotId
-            ? { ...it, reactions: [...(it.reactions || []), reaction] }
-            : it
-        ));
-      } else {
-        setCart(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            items: prev.items.map(item =>
-              item.id === reaction.cartItemId
-                ? { ...item, reactions: [...(item.reactions || []), reaction] }
-                : item
-            ),
-          };
-        });
-      }
+      appendReaction(reaction);
     });
 
     socket.on('member:joined', (member) => {
@@ -576,17 +558,47 @@ export default function CollabCartPage({ overrideView }) {
     }
   };
 
+  // Posting a reaction previously only appeared for the poster once the
+  // live-session socket echoed it back — but that socket doesn't connect
+  // at all in review mode (the default since A2/A3), so a comment/love/
+  // skip looked like it vanished: input cleared, nothing rendered, no
+  // confirmation it sent. Appending the server's own response locally
+  // means the poster always sees their reaction immediately, live session
+  // or not. Guarded by reaction id so it's a no-op if the live socket also
+  // echoes the same reaction back (live-session mode).
+  const appendReaction = (reaction) => {
+    if (!reaction?.id) return;
+    if (mode === 'mission') {
+      setSlotItems(prev => prev.map(it =>
+        it.id === reaction.missionSlotId && !(it.reactions || []).some(r => r.id === reaction.id)
+          ? { ...it, reactions: [...(it.reactions || []), reaction] }
+          : it
+      ));
+    } else {
+      setCart(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map(item =>
+            item.id === reaction.cartItemId && !(item.reactions || []).some(r => r.id === reaction.id)
+              ? { ...item, reactions: [...(item.reactions || []), reaction] }
+              : item
+          ),
+        };
+      });
+    }
+  };
+
   const handleReact = async (type, content = '') => {
     if (!currentItem) return;
     // Ambient reaction float (Collab Cart Complete Session UX Spec §5) — a
     // love tap floats up on everyone's screen live, not just the count.
     if (type === 'love') handleEmojiBurst('❤️');
     try {
-      if (mode === 'mission') {
-        await collabApi.react(token, null, type, content, currentItem.missionSlotId, identity);
-      } else {
-        await collabApi.react(token, currentItem.id, type, content, undefined, identity);
-      }
+      const reaction = mode === 'mission'
+        ? await collabApi.react(token, null, type, content, currentItem.missionSlotId, identity)
+        : await collabApi.react(token, currentItem.id, type, content, undefined, identity);
+      appendReaction(reaction);
     } catch (err) {
       console.error(err);
     }
@@ -610,11 +622,10 @@ export default function CollabCartPage({ overrideView }) {
   const handleComment = async () => {
     if (!comment.trim() || !currentItem) return;
     try {
-      if (mode === 'mission') {
-        await collabApi.react(token, null, 'comment', comment, currentItem.missionSlotId, identity);
-      } else {
-        await collabApi.react(token, currentItem.id, 'comment', comment, undefined, identity);
-      }
+      const reaction = mode === 'mission'
+        ? await collabApi.react(token, null, 'comment', comment, currentItem.missionSlotId, identity)
+        : await collabApi.react(token, currentItem.id, 'comment', comment, undefined, identity);
+      appendReaction(reaction);
       setComment('');
     } catch (err) {
       console.error(err);
@@ -632,11 +643,10 @@ export default function CollabCartPage({ overrideView }) {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         stream.getTracks().forEach(t => t.stop());
         try {
-          if (mode === 'mission') {
-            await collabApi.voice(token, null, blob, currentItem.missionSlotId, identity);
-          } else {
-            await collabApi.voice(token, currentItem.id, blob, undefined, identity);
-          }
+          const { reaction } = mode === 'mission'
+            ? await collabApi.voice(token, null, blob, currentItem.missionSlotId, identity)
+            : await collabApi.voice(token, currentItem.id, blob, undefined, identity);
+          appendReaction(reaction);
         } catch (err) {
           console.error('Voice upload failed:', err);
         }
