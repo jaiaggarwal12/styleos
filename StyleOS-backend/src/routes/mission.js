@@ -71,8 +71,8 @@ router.get('/wedding/:id', auth, async (req, res) => {
     const spent = slots.reduce((s, sl) => s + (sl.product?.price || 0), 0);
 
     const rejections = await query(
-      `SELECT * FROM slot_rejections WHERE mission_id = :1 ORDER BY rejected_at ASC`,
-      [req.params.id]
+      `SELECT * FROM slot_rejections WHERE mission_id = :mid ORDER BY rejected_at ASC`,
+      { mid: req.params.id }
     );
 
     res.json({ mission, events, members, slots, spent, rejections: rejections.rows || [] });
