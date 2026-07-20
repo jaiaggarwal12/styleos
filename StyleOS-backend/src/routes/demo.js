@@ -296,17 +296,17 @@ router.post('/seed', async (req, res) => {
       const s_dad_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memDad.id, allocatedBudget: 15000 }]);
       await MissionSlot.update(s_dad_wedding[0].id, { productId: 'e7e98494-f0af-4b65-a696-37f07fbf7104', status: 'filled' });
 
-      // 10. Rohan Wedding (Ritu Kumar Studio Navy Blue Sherwani — Men: b706c7ea-4f18-41ba-962f-b653f4ab5554)
+      // 10. Rohan Wedding (Ritu Kumar Studio Maroon Sherwani — Men: bb912e08-2500-4b95-8ffd-f8da0a69e4bc) — was Navy Blue, outside the Wedding event palette (Red/Maroon/Gold)
       const s_rohan_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memRohan.id, allocatedBudget: 15000 }]);
-      await MissionSlot.update(s_rohan_wedding[0].id, { productId: 'b706c7ea-4f18-41ba-962f-b653f4ab5554', status: 'filled' });
+      await MissionSlot.update(s_rohan_wedding[0].id, { productId: 'bb912e08-2500-4b95-8ffd-f8da0a69e4bc', status: 'filled' });
 
       // 11. Mom Wedding (Global Desi Red Lehenga Choli — Women: d1156f94-cbd1-48dd-b9ac-b586d4c7b3f7)
       const s_mom_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memMom.id, allocatedBudget: 10000 }]);
       await MissionSlot.update(s_mom_wedding[0].id, { productId: 'd1156f94-cbd1-48dd-b9ac-b586d4c7b3f7', status: 'filled' });
 
-      // 12. Sneha Wedding (Ritu Kumar Studio Black Saree — Women: 2b2fd507-645f-40dc-b225-cfabf460a0da)
+      // 12. Sneha Wedding (Biba Maroon Saree — Women: 948496da-6e21-4fb0-bf53-155ed6d348ca) — was Black, outside the Wedding event palette (Red/Maroon/Gold)
       const s_sneha_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memSneha.id, allocatedBudget: 8000 }]);
-      await MissionSlot.update(s_sneha_wedding[0].id, { productId: '2b2fd507-645f-40dc-b225-cfabf460a0da', status: 'filled' });
+      await MissionSlot.update(s_sneha_wedding[0].id, { productId: '948496da-6e21-4fb0-bf53-155ed6d348ca', status: 'filled' });
 
       // Record rejections that trigger a price deadlock. The quality
       // rejection's reference price must produce a floor (price*1.1)
@@ -523,17 +523,17 @@ router.post('/seed-all', async (req, res) => {
     const s_dad_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memDad.id, allocatedBudget: 15000 }]);
     await MissionSlot.update(s_dad_wedding[0].id, { productId: 'e7e98494-f0af-4b65-a696-37f07fbf7104', status: 'filled' });
 
-    // 10. Rohan Wedding (Ritu Kumar Studio Navy Blue Sherwani — Men: b706c7ea-4f18-41ba-962f-b653f4ab5554)
+    // 10. Rohan Wedding (Ritu Kumar Studio Maroon Sherwani — Men: bb912e08-2500-4b95-8ffd-f8da0a69e4bc) — was Navy Blue, outside the Wedding event palette (Red/Maroon/Gold)
     const s_rohan_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memRohan.id, allocatedBudget: 15000 }]);
-    await MissionSlot.update(s_rohan_wedding[0].id, { productId: 'b706c7ea-4f18-41ba-962f-b653f4ab5554', status: 'filled' });
+    await MissionSlot.update(s_rohan_wedding[0].id, { productId: 'bb912e08-2500-4b95-8ffd-f8da0a69e4bc', status: 'filled' });
 
     // 11. Mom Wedding (Global Desi Red Lehenga Choli — Women: d1156f94-cbd1-48dd-b9ac-b586d4c7b3f7)
     const s_mom_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memMom.id, allocatedBudget: 10000 }]);
     await MissionSlot.update(s_mom_wedding[0].id, { productId: 'd1156f94-cbd1-48dd-b9ac-b586d4c7b3f7', status: 'filled' });
 
-    // 12. Sneha Wedding (Ritu Kumar Studio Black Saree — Women: 2b2fd507-645f-40dc-b225-cfabf460a0da)
+    // 12. Sneha Wedding (Biba Maroon Saree — Women: 948496da-6e21-4fb0-bf53-155ed6d348ca) — was Black, outside the Wedding event palette (Red/Maroon/Gold)
     const s_sneha_wedding = await MissionSlot.createMany([{ missionId: mId, eventId: evWedding.id, memberId: memSneha.id, allocatedBudget: 8000 }]);
-    await MissionSlot.update(s_sneha_wedding[0].id, { productId: '2b2fd507-645f-40dc-b225-cfabf460a0da', status: 'filled' });
+    await MissionSlot.update(s_sneha_wedding[0].id, { productId: '948496da-6e21-4fb0-bf53-155ed6d348ca', status: 'filled' });
 
     const slotKeyStr = `mission:${mId}:${evMehendi.id}:${memSneha.id}`;
     await query(
