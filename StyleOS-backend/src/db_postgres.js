@@ -10,8 +10,22 @@
  *   2. Oracle-only SQL text (SYSTIMESTAMP, NVL) -> Postgres equivalents
  *   3. Postgres's lowercase result columns -> UPPERCASE, matching what
  *      Oracle always returned and what the whole app already expects
+ *   4. Postgres's NUMERIC columns -> JS numbers, not strings (see below)
  */
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// pg returns NUMERIC/DECIMAL columns as strings by default — arbitrary
+// precision, so it refuses to silently lose precision converting to a JS
+// float. Oracle's driver returns NUMBER as a native JS number, and the
+// whole app already assumes that (price + price, budget - spent, etc.)
+// — without this, every one of those becomes string concatenation
+// instead of arithmetic. 1700 is NUMERIC's Postgres type OID.
+types.setTypeParser(1700, (val) => (val === null ? null : parseFloat(val)));
+// Same problem, separate type: COUNT(*) and other aggregates return
+// BIGINT (OID 20), which pg also stringifies (a real 64-bit value can
+// exceed JS's safe integer range). Every count in this app is well
+// within that range, so parseInt is safe and matches Oracle's behavior.
+types.setTypeParser(20, (val) => (val === null ? null : parseInt(val, 10)));
 
 let pool = null;
 

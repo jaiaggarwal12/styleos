@@ -51,7 +51,7 @@ async function getRepetitionCounts(venueKey, productIds) {
     const r = await query(
       `SELECT product_id, COUNT(*) AS cnt FROM venue_shipment_log
        WHERE venue_key = :vk AND product_id IN (${placeholders.join(', ')})
-       AND shipped_at >= SYSTIMESTAMP - NUMTODSINTERVAL(${REPETITION_WINDOW_DAYS}, 'DAY')
+       AND shipped_at >= SYSTIMESTAMP - INTERVAL '${REPETITION_WINDOW_DAYS}' DAY
        GROUP BY product_id`,
       binds
     );
