@@ -732,7 +732,7 @@ export default function AgentPage() {
           />
           <button
             className="agent-start-btn"
-            onClick={handleStart}
+            onClick={() => handleStart()}
             disabled={!goal.trim()}
           >
             Start Shopping →
