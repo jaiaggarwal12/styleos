@@ -124,7 +124,10 @@ export default function CartPage() {
   return (
     <div className="cart-page">
       <div className="cart-header">
-        <button className="back-btn" onClick={() => navigate('/agent')}>← Back</button>
+        {/* B1 — was hardcoded to /agent regardless of how this cart was
+            reached (Wardrobe, a collab link, Kiya) — navigate(-1) returns
+            to wherever the user actually came from instead. */}
+        <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
         <h1>{cartData.NAME || cartData.name || 'My Wardrobe'}</h1>
         <div className="cart-total">₹{total.toLocaleString()}</div>
       </div>
@@ -137,7 +140,12 @@ export default function CartPage() {
 
       <div className="cart-items">
         {items.map(item => (
-          <div key={item.id} className="cart-item">
+          <div
+            key={item.id}
+            className="cart-item"
+            style={{ cursor: item.product?.id ? 'pointer' : 'default' }}
+            onClick={() => item.product?.id && navigate(`/product/${item.product.id}`)}
+          >
             <div className="item-image">
               {item.product?.images?.[0]
                 ? <img src={item.product.images[0]} alt={item.product.title}
@@ -157,7 +165,7 @@ export default function CartPage() {
               </div>
               <p className="item-price">₹{item.product?.price?.toLocaleString()}</p>
             </div>
-            <button className="remove-btn" onClick={() => handleRemove(item.id)}>✕</button>
+            <button className="remove-btn" onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}>✕</button>
           </div>
         ))}
       </div>

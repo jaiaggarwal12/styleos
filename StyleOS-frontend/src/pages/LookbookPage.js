@@ -72,6 +72,7 @@ export default function LookbookPage() {
       .filter(s => s.product)
       .map(s => ({
         id: s.id,
+        productId: s.product?.id,
         image: s.product?.images?.[0],
         caption: `${memberName[s.memberId] || 'Someone'} · ${eventName[s.eventId] || ''}`,
         title: s.product?.title,
@@ -85,6 +86,7 @@ export default function LookbookPage() {
     budget = cart.goalPlan?.total_budget || spent;
     tiles = (cart.items || []).map(item => ({
       id: item.id,
+      productId: item.product?.id,
       image: item.product?.images?.[0],
       caption: item.product?.baseColour,
       title: item.product?.title,
@@ -113,7 +115,12 @@ export default function LookbookPage() {
 
       <div className="lookbook-grid">
         {tiles.map((t, i) => (
-          <div key={t.id} className="lookbook-tile" style={{ animationDelay: `${i * 60}ms` }}>
+          <div
+            key={t.id}
+            className="lookbook-tile"
+            style={{ animationDelay: `${i * 60}ms`, cursor: t.productId ? 'pointer' : 'default' }}
+            onClick={() => t.productId && navigate(`/product/${t.productId}`)}
+          >
             <div className="lookbook-tile-image">
               {t.image
                 ? <img src={t.image} alt={t.title} onError={e => { e.target.style.display = 'none'; }} />

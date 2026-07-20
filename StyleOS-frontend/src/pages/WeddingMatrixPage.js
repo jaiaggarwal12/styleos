@@ -609,7 +609,11 @@ export default function WeddingMatrixPage({ overrideView }) {
 
                     {slot?.status === 'filled' && slot.product && !isRejecting && (
                       <div className="portal-outfit-container">
-                        <div className="portal-outfit-image-wrapper">
+                        <div
+                          className="portal-outfit-image-wrapper"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/product/${slot.product.id || slot.product.ID}`)}
+                        >
                           {slot.product.images?.[0] && (
                             <img className="portal-outfit-image" src={slot.product.images[0]} alt={slot.product.title} onError={e => { e.target.style.display = 'none'; }} />
                           )}
