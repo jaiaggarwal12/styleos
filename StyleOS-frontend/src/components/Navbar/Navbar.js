@@ -37,7 +37,7 @@ export default function Navbar() {
         dispatch(search((q || '').trim()));
     }
 
-    const bagItemCount = useSelector(state => state.bagStore.length);
+    const bagItemCount = useSelector(state => state.bagStore?.length || 0);
 
     return (
         <div className="navbar flex-row">

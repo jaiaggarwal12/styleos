@@ -17,7 +17,7 @@ export const nFormatter = (num, digits=1) => {
 
 export const isInWishList = ( wishList , item )  =>{
     let isPresent = false;
-    wishList.forEach( wishItem => {
+    (wishList || []).forEach( wishItem => {
         if( wishItem.id === item.id ){
             isPresent = true;
         }
@@ -27,7 +27,7 @@ export const isInWishList = ( wishList , item )  =>{
 
 export const isInBag = ( bag , item )  =>{
     let isPresent = false;
-    bag.forEach( bagItem => {
+    (bag || []).forEach( bagItem => {
         if( bagItem.id === item.id ){
             isPresent = true;
         }
@@ -37,7 +37,7 @@ export const isInBag = ( bag , item )  =>{
 
 export const findTotal = ( bag ) => {
     let total = 0;
-    bag.forEach( item => {
+    (bag || []).forEach( item => {
         total += item.quantity * item.price;
     });
     return total;
