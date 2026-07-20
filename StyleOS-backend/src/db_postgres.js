@@ -15,10 +15,20 @@ const { Pool } = require('pg');
 
 let pool = null;
 
-function getPool() {
+async function getPool() {
   if (pool) return pool;
+  // Parsing DATABASE_URL ourselves rather than handing the raw string to
+  // Pool's own connectionString option — combining that with an explicit
+  // ssl object triggers a real pg parsing bug (password silently comes
+  // back undefined, fails with a confusing SASL error). Node's own URL
+  // parser has no such issue.
+  const u = new URL(process.env.DATABASE_URL);
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    host: u.hostname,
+    port: u.port || 5432,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    database: u.pathname.replace(/^\//, ''),
     ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
   });
   console.log('✅ Postgres connection pool created');
@@ -55,7 +65,7 @@ function uppercaseRow(row) {
 }
 
 async function query(sql, binds = [], opts = {}) {
-  const p = getPool();
+  const p = await getPool();
   const translatedSqlText = translateSql(sql);
   const { sql: finalSql, values } = translateBinds(translatedSqlText, binds);
   try {
