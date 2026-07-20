@@ -585,7 +585,7 @@ router.post('/:token/reconcile', identify, async (req, res) => {
              AND LOWER(base_colour) LIKE LOWER(:col)
              AND price BETWEEN :plo AND :phi
              AND id <> :pid
-             AND ROWNUM = 1`,
+             FETCH FIRST 1 ROWS ONLY`,
             {
               at: item.product.articleType,
               col: `%${action.colorPreference}%`,
