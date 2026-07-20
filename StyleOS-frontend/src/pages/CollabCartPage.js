@@ -558,6 +558,20 @@ export default function CollabCartPage({ overrideView }) {
     }
   };
 
+  // Explicit tap targets for the same navigation the swipe gesture already
+  // does — swipe alone never worked for a mouse/desktop reviewer and gave
+  // no visible sense of position or how many items there were.
+  const goToPrevItem = () => {
+    if (currentIndex <= 0) return;
+    setCurrentIndex(i => i - 1);
+    setCurrentImageIndex(0);
+  };
+  const goToNextItem = () => {
+    if (currentIndex >= items.length - 1) return;
+    setCurrentIndex(i => i + 1);
+    setCurrentImageIndex(0);
+  };
+
   // Posting a reaction previously only appeared for the poster once the
   // live-session socket echoed it back — but that socket doesn't connect
   // at all in review mode (the default since A2/A3), so a comment/love/
@@ -1237,9 +1251,33 @@ export default function CollabCartPage({ overrideView }) {
             )}
           </div>
 
-          <div className="swipe-hints">
-            {currentIndex > 0 && <div className="hint-top">↑ Swipe up for previous</div>}
-            {currentIndex < items.length - 1 && <div className="hint-bottom">↓ Swipe down for next</div>}
+          {/* Swipe still works exactly as before — these are explicit tap
+              targets plus a position indicator, since a blind gesture with
+              only a text hint never worked for a mouse/desktop reviewer and
+              gave no sense of how many items there were. */}
+          <div className="item-nav">
+            <button
+              className="item-nav-arrow item-nav-arrow-up"
+              onClick={goToPrevItem}
+              disabled={currentIndex === 0}
+              aria-label="Previous item"
+            >
+              ▲
+            </button>
+            <div className="item-nav-dots">
+              {items.length <= 10 && items.map((_, i) => (
+                <span key={i} className={`item-nav-dot${i === currentIndex ? ' item-nav-dot-active' : ''}`} />
+              ))}
+              <span className="item-nav-count">{currentIndex + 1} / {items.length}</span>
+            </div>
+            <button
+              className="item-nav-arrow item-nav-arrow-down"
+              onClick={goToNextItem}
+              disabled={currentIndex === items.length - 1}
+              aria-label="Next item"
+            >
+              ▼
+            </button>
           </div>
         </div>
       )}
