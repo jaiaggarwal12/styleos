@@ -1,5 +1,5 @@
 {
-  "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+  "buildCommand": "CI=false NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
   "outputDirectory": "build",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
