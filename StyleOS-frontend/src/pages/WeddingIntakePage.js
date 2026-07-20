@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mission as missionApi } from '../services/api';
 import './Mission.css';
@@ -13,15 +13,34 @@ const DEFAULT_MEMBERS = [
   { name: 'Sister', gender: 'Women', roleWeight: 1, ageBracket: 'adult' },
 ];
 
+// B2 — this form (community, city, budget, ceremonies, and a whole editable
+// family list) previously lived only in React state; an accidental refresh
+// mid-fill silently lost everything. sessionStorage (not localStorage) so
+// the draft survives a refresh but doesn't linger forever once the tab closes.
+const DRAFT_KEY = 'styleos_wedding_intake_draft';
+function loadDraft() {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function WeddingIntakePage() {
   const navigate = useNavigate();
-  const [community, setCommunity] = useState('Punjabi');
-  const [city, setCity] = useState('Ludhiana');
-  const [totalBudget, setTotalBudget] = useState(120000);
-  const [events, setEvents] = useState([...DEFAULT_EVENTS]);
-  const [members, setMembers] = useState([...DEFAULT_MEMBERS]);
+  const draft = loadDraft();
+  const [community, setCommunity] = useState(draft?.community ?? 'Punjabi');
+  const [city, setCity] = useState(draft?.city ?? 'Ludhiana');
+  const [totalBudget, setTotalBudget] = useState(draft?.totalBudget ?? 120000);
+  const [events, setEvents] = useState(draft?.events ?? [...DEFAULT_EVENTS]);
+  const [members, setMembers] = useState(draft?.members ?? [...DEFAULT_MEMBERS]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ community, city, totalBudget, events, members }));
+    } catch { /* storage full/unavailable — draft persistence is best-effort */ }
+  }, [community, city, totalBudget, events, members]);
 
   const toggleEvent = (name) => {
     setEvents(prev => prev.includes(name) ? prev.filter(e => e !== name) : [...prev, name]);
@@ -52,6 +71,7 @@ export default function WeddingIntakePage() {
         members: members.map(m => ({ ...m, roleWeight: Number(m.roleWeight) })),
       };
       const result = await missionApi.createWedding(payload);
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* non-essential cleanup */ }
       navigate(`/mission/wedding/${result.mission.id}`);
     } catch (err) {
       setError(err.message || 'Failed to create mission');

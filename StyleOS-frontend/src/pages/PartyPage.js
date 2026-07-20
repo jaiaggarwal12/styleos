@@ -34,6 +34,8 @@ export default function PartyPage({ overrideView }) {
   });
   const [myCarts, setMyCarts] = useState([]);
   const [selectedCartId, setSelectedCartId] = useState('');
+  const [attaching, setAttaching] = useState(false);
+  const [attachError, setAttachError] = useState('');
 
   // --- Autopilot walkthrough script ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -140,17 +142,29 @@ export default function PartyPage({ overrideView }) {
   async function handleAttachCart(cartId) {
     setSelectedCartId(cartId);
     if (!guest) return;
+    setAttaching(true);
+    setAttachError('');
     try {
       const res = await partyApi.updateCart(token, guest.guestToken, cartId);
       setClashes(res.clashes || []);
       await load();
     } catch (err) {
       console.error(err);
+      setAttachError("Couldn't attach that cart — try again.");
+    } finally {
+      setAttaching(false);
     }
   }
 
   if (loading) return <div className="party-loading"><div className="spinner" />Loading party...</div>;
-  if (!party) return <div className="party-error">This party link doesn't lead anywhere.</div>;
+  if (!party) {
+    return (
+      <div className="party-error">
+        <p>This party link doesn't lead anywhere.</p>
+        <a href="/" className="party-error-home">← Back to StyleOS</a>
+      </div>
+    );
+  }
 
   if (!guest) {
     return (
@@ -295,12 +309,15 @@ export default function PartyPage({ overrideView }) {
         {myCarts.length === 0 ? (
           <p className="party-no-carts">No carts yet — build one with Kiya first, then come back here.</p>
         ) : (
-          <select value={selectedCartId} onChange={e => handleAttachCart(e.target.value)}>
-            <option value="">Choose a cart to compare</option>
-            {myCarts.map(c => (
-              <option key={c.ID || c.id} value={c.ID || c.id}>{c.NAME || c.name}</option>
-            ))}
-          </select>
+          <>
+            <select value={selectedCartId} onChange={e => handleAttachCart(e.target.value)} disabled={attaching}>
+              <option value="">{attaching ? 'Attaching...' : 'Choose a cart to compare'}</option>
+              {myCarts.map(c => (
+                <option key={c.ID || c.id} value={c.ID || c.id}>{c.NAME || c.name}</option>
+              ))}
+            </select>
+            {attachError && <p className="party-attach-error">{attachError}</p>}
+          </>
         )}
       </div>
     </div>
