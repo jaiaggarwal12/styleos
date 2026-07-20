@@ -9,7 +9,7 @@ export default function CollabInvitesPage() {
 
   useEffect(() => {
     collabApi.myInvites()
-      .then(data => setInvites(data))
+      .then(data => setInvites(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -35,6 +35,7 @@ export default function CollabInvitesPage() {
         <div className="invites-list">
           {invites.map((invite, i) => {
             const token = invite.SHARE_TOKEN || invite.shareToken;
+            if (!token) return null; // never render a /collab/undefined dead link
             const name = invite.CART_NAME || invite.cartName || 'Wardrobe';
             const total = invite.TOTAL_PRICE || invite.totalPrice || 0;
             return (

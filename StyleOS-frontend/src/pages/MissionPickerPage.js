@@ -51,7 +51,12 @@ export default function MissionPickerPage() {
 
   const handleGeneratePlan = async () => {
     const type = activeType === 'Custom' ? customType.trim() : activeType;
-    if (!type) return;
+    if (!type) {
+      // Was a silent `return` — clicking Generate (or hitting Enter) with an
+      // empty custom occasion looked like a dead button. Say what's missing.
+      setError('Tell me the occasion first — even one word.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {

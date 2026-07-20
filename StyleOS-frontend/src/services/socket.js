@@ -3,21 +3,37 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
 let socket = null;
+let currentUserId = null;
 
 export function getSocket() {
   if (!socket) {
     socket = io(SOCKET_URL, {
       autoConnect: true,
-      transports: ['websocket'],
+      // 'websocket' alone fails outright on networks that block the
+      // upgrade (some hostel/corporate wifi) — polling as a fallback is
+      // socket.io's own recommended default, not just websocket-or-nothing.
+      transports: ['websocket', 'polling'],
+    });
+    // A network blip, laptop sleep/wake, or the backend restarting all
+    // drop the transport and reconnect automatically — but "reconnect" is
+    // a fresh connection from the server's point of view, so it forgets
+    // this socket was ever in the user's room. Without re-emitting
+    // join:user here, Kiya's plan -> shop -> finalize flow (which relies
+    // entirely on agent:progress/agent:done landing in that room) just
+    // hangs forever after any reconnect, with no error shown anywhere.
+    socket.on('connect', () => {
+      if (currentUserId) socket.emit('join:user', { userId: currentUserId });
     });
   }
   return socket;
 }
 
 export function connectSocket(userId) {
+  currentUserId = userId;
   const s = getSocket();
   if (!s.connected) {
     s.connect();
+  } else {
     s.emit('join:user', { userId });
   }
   return s;

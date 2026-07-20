@@ -41,8 +41,8 @@ function PrivateRoute({ children }) {
 
 function AppInner() {
   const { modals, similarProducts } = useSelector(state => ({
-    modals: state.modalsStore,
-    similarProducts: state.similarProductsStore,
+    modals: state.modalsStore || {},
+    similarProducts: state.similarProductsStore || {},
   }));
 
   const location = useLocation();

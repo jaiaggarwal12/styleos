@@ -21,13 +21,15 @@ export default function BagContainer() {
     // so both surfaces show the same history.
     const [pastCarts, setPastCarts] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [historyError, setHistoryError] = useState(false);
 
     useEffect(() => {
         if (!user) return;
         setLoadingHistory(true);
+        setHistoryError(false);
         cartApi.list()
             .then(carts => setPastCarts(Array.isArray(carts) ? carts : []))
-            .catch(console.error)
+            .catch(() => setHistoryError(true))
             .finally(() => setLoadingHistory(false));
     }, [user, bag.length]);
 
@@ -83,11 +85,13 @@ export default function BagContainer() {
                     )
                 })
             }
-            {user && (pastCarts.length > 0 || loadingHistory) && (
+            {user && (pastCarts.length > 0 || loadingHistory || historyError) && (
                 <div className="bag-history-section">
                     <p className="bag-history-title">Your carts</p>
                     {loadingHistory ? (
                         <p className="bag-history-loading">Loading...</p>
+                    ) : historyError ? (
+                        <p className="bag-history-loading">Couldn't load your past carts.</p>
                     ) : (
                         pastCarts.map(c => {
                             const cid = c.ID || c.id;

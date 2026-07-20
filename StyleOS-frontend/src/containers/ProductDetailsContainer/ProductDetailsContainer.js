@@ -1,4 +1,4 @@
-import {React,useState} from 'react';
+import {React,useState,useEffect} from 'react';
 import './ProductDetailsContainer.css';
 import { useSelector , useDispatch } from 'react-redux';
 import { addItemToWishlist , removeItemFromWishlist } from '../../actions/wishlist';
@@ -18,15 +18,16 @@ export default function ProductDetailsContainer({product}) {
     let isAddedToWishlist = isInWishList( wishlist , product );
     let isAddedToBag = isInBag( bag , product );
     const [selectedSize,setSelectedSize] = useState(null);
-    if( isAddedToBag ){
-        bag.map(item => {
-            if( item.id === product.id ){
-                if( selectedSize != item.size ){
-                    setSelectedSize(item.size);
-                }
-            }
-        })
-    }
+    // Reflect the already-chosen size for an in-bag product. Previously this
+    // called setSelectedSize during render, forcing a wasted extra render
+    // every pass; an effect keyed on the bag/product runs it after commit,
+    // the correct React way.
+    useEffect(() => {
+        const inBag = (bag || []).find(item => item.id === product.id);
+        if (inBag && inBag.size !== selectedSize) {
+            setSelectedSize(inBag.size);
+        }
+    }, [bag, product.id, selectedSize]);
     return (
         <div className="product-details-container" >
             <h2 className="product-brandname" >{product.brandName}</h2>

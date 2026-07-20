@@ -6,6 +6,9 @@ import{
 const defaultWishlistState=[];
 
 export const wishlist = ( state = defaultWishlistState , action )=>{
+    // Guaranteed-array invariant, same reasoning as reducers/bag.js — every
+    // consumer reads this without a guard.
+    if (!Array.isArray(state)) state = defaultWishlistState;
     switch(action.type){
         case ADD_TO_WISHLIST:
             return [...state, action.item];

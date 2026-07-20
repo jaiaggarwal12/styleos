@@ -6,15 +6,15 @@ import {addItemToWishlist,removeItemFromWishlist} from '../../actions/wishlist';
 import {addItemToBag} from '../../actions/bag';
 export default function WishListItemCard({ item }) {
     const dispatch = useDispatch();
-    function moveItemToBagHandler(event){
-        console.log(item);
-        console.log("move it to bag");
-    }
+    const thumbnail = Array.isArray(item.images) ? item.images[0] : item.images;
     return (
         <div className="wishlist-item-card">
             <Link to={`/product/${item.id}`}>
                 <div className="wishlist-item-image-container">
-                    <img src={item.images[0]} alt="product" className="wishlist-item-image" loading="lazy"/>
+                    {thumbnail
+                        ? <img src={thumbnail} alt="product" className="wishlist-item-image" loading="lazy" onError={e => { e.target.style.display = 'none'; }}/>
+                        : <span className="wishlist-item-placeholder">👕</span>
+                    }
                 </div>
                 <div className="wishlist-item-details flex-column ">
                     <div className="wishlist-item-name">{item.productName}</div>

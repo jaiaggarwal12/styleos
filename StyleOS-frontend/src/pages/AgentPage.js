@@ -88,6 +88,11 @@ export default function AgentPage() {
   const [sheetItem, setSheetItem] = useState(null);
   const [swapping, setSwapping] = useState(false);
   const [undoState, setUndoState] = useState(null); // { message, productId } | null
+  // Swap/remove/reoptimize are triggered from the results grid, but their
+  // error paths only wrote to chatLog/steps — neither of which renders on
+  // the grid tab — so a failure looked like a dead button. This toast is
+  // always visible regardless of tab.
+  const [actionError, setActionError] = useState('');
 
   const stepsEndRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -99,6 +104,12 @@ export default function AgentPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatLog, refining]);
+
+  useEffect(() => {
+    if (!actionError) return;
+    const t = setTimeout(() => setActionError(''), 6000);
+    return () => clearTimeout(t);
+  }, [actionError]);
 
   useEffect(() => {
     if (!user) return;
@@ -465,6 +476,7 @@ export default function AgentPage() {
       setSummary(prev => prev ? { ...prev, total: result.cartTotal } : prev);
     } catch (err) {
       setSteps(prev => [...prev, { type: 'error', message: `❌ ${err.message}`, ts: Date.now() }]);
+      setActionError(`Couldn't recheck prices: ${err.message}`);
     } finally {
       setReoptimizing(false);
     }
@@ -504,6 +516,7 @@ export default function AgentPage() {
       }
     } catch (err) {
       setChatLog(prev => [...prev, { from: 'stylist', text: `Couldn't complete that swap: ${err.message}`, ts: Date.now() }]);
+      setActionError(`Couldn't complete that swap: ${err.message}`);
     } finally {
       setSwapping(false);
     }
@@ -527,6 +540,7 @@ export default function AgentPage() {
     } catch (err) {
       setCartItems(prev => prev.map(it => it.id === removed.id ? { ...it, _exiting: false } : it));
       setChatLog(prev => [...prev, { from: 'stylist', text: `Couldn't remove that item: ${err.message}`, ts: Date.now() }]);
+      setActionError(`Couldn't remove that item: ${err.message}`);
     }
   };
 
@@ -975,6 +989,13 @@ export default function AgentPage() {
           onUndo={handleUndoRemove}
           onDismiss={() => setUndoState(null)}
         />
+      )}
+
+      {actionError && (
+        <div className="agent-action-error" role="alert" onClick={() => setActionError('')}>
+          <span>{actionError}</span>
+          <button className="agent-action-error-close" onClick={() => setActionError('')}>✕</button>
+        </div>
       )}
 
       {phase === 'error' && (

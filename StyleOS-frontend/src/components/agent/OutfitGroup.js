@@ -2,7 +2,7 @@ import React from 'react';
 import ProductCarousel from './ProductCarousel';
 
 export default function OutfitGroup({ outfit, cartItemsById, onTapItem, plan, index }) {
-  const items = outfit.itemIds.map(id => cartItemsById[id]).filter(Boolean);
+  const items = (outfit.itemIds || []).map(id => cartItemsById[id]).filter(Boolean);
   if (items.length === 0) return null;
 
   return (

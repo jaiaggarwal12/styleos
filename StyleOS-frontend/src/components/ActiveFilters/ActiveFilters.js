@@ -13,16 +13,16 @@ export default function ActiveFilter() {
     const activeColorFilter=[];
     const activePriceFilter=[];
     const dispatch = useDispatch();
-    const filters = useSelector(state => state.filtersStore);
+    const filters = useSelector(state => state.filtersStore) || {};
     const {gender , discount , color , price }  = filters;
     if(gender) activeGenderFilter.push(gender);
     if(discount) activeDiscountFilter.push(discount);
-    color.forEach( (color) => {
+    (color || []).forEach( (color) => {
         activeColorFilter.push( color );
-    } )
-    price.forEach( (price) => {
+    } );
+    (price || []).forEach( (price) => {
         activePriceFilter.push( price );
-    } ) 
+    } );
     return (
         <div className="active-filters flex-row" >
             {

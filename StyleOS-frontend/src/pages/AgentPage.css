@@ -375,3 +375,40 @@
   flex-direction: column;
 }
 
+
+/* Always-visible action-error toast (swap/remove/reoptimize failures that
+   used to write only to a hidden chat/steps log). */
+.agent-action-error {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  max-width: 92%;
+  z-index: 1200;
+  background: #DC2626;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  animation: agent-action-error-in 0.2s ease;
+}
+@keyframes agent-action-error-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.agent-action-error-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}

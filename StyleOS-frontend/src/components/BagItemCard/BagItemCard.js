@@ -8,14 +8,17 @@ import {useDispatch , useSelector} from 'react-redux';
 export default function BagItemCard({ item }) {
     const dispatch = useDispatch();
     const wishlist = useSelector(state => state.wishlistStore);
-    console.log(item);
     let isWishListed = isInWishList( wishlist,item )
     const sizes = item.sizes && item.sizes.length > 0 ? item.sizes : ['S', 'M', 'L', 'XL'];
+    const thumbnail = Array.isArray(item.images) ? item.images[0] : item.images;
     return (
         <div className="bag-item-card"  >
             <Link to={`/product/${item.id}`}>
                 <div className="bag-item-image-container">
-                    <img src={item.images[0]} alt="product" className="bag-item-image" loading="lazy"/>
+                    {thumbnail
+                        ? <img src={thumbnail} alt="product" className="bag-item-image" loading="lazy" onError={e => { e.target.style.display = 'none'; }}/>
+                        : <span className="bag-item-placeholder">👕</span>
+                    }
                 </div>
             </Link>
             <div className="bag-item-details">

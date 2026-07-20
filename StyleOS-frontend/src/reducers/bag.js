@@ -9,6 +9,13 @@ import {
 const defaultBagState = [];
 
 export default function bag(state = defaultBagState, action) {
+    // Every consumer (Navbar's badge count, BagContainer, ItemCard, ...)
+    // assumes this is always a clean array with zero guards of its own —
+    // exactly the assumption that took down every route in production
+    // once. Making that true here, structurally, means it can never
+    // happen again regardless of what feeds this reducer in the future
+    // (a persisted-state path, a hot-reload edge case, anything else).
+    if (!Array.isArray(state)) state = defaultBagState;
     switch (action.type) {
         case ADD_TO_BAG:
             var alreadyPresent=false;
@@ -17,7 +24,6 @@ export default function bag(state = defaultBagState, action) {
                     alreadyPresent=true;
                 }
             })
-            console.log(alreadyPresent);
             if(!alreadyPresent){
                 return [...state, action.item];
             }
