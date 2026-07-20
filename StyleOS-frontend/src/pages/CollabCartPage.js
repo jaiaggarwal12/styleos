@@ -808,7 +808,11 @@ export default function CollabCartPage({ overrideView }) {
   const headerTitle = mode === 'mission'
     ? (missionInfo.mission.TITLE || missionInfo.mission.title)
     : cart.name;
-  const cartTotalValue = cart.totalPrice || 0;
+  // `cart` is only ever populated in cart mode — reading .totalPrice
+  // unconditionally crashed every mission-mode collab link (cart stays
+  // null there), which is what threw the ErrorBoundary's "Something went
+  // wrong" screen for wedding invite links.
+  const cartTotalValue = mode === 'cart' ? (cart.totalPrice || 0) : 0;
   const itemQuantityTotal = items.reduce((s, it) => s + (it.quantity || 1), 0);
   const headerSub = mode === 'mission'
     ? `${items.length} outfits filled`
