@@ -89,6 +89,11 @@ export default function CollabCartPage({ overrideView }) {
   const identity = effectiveUser ? null : effectiveGuest; // null identity => collabApi uses the real Authorization header
 
   const items = mode === 'mission' ? slotItems : (cart?.items || []);
+  // Socket handlers are registered once and would otherwise close over a
+  // stale `items` — this ref always reflects the current list so an
+  // incoming vote can jump everyone to the item actually being voted on.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
   const autopilot = urlParams.get('autopilot') === 'true';
   // A3 — a shared link lands in review mode by default; the live session
   // (presence, sharing controls, chat, everything socket-driven) only
@@ -303,7 +308,14 @@ export default function CollabCartPage({ overrideView }) {
   }, [currentIndex]);
 
   useEffect(() => {
-    if (!token || (!effectiveUser && !effectiveGuest) || !liveSessionActive) return;
+    // Connect for ANYONE viewing the shared cart, not only after they opt
+    // into the full live session. Reactions, votes, and presence have to
+    // sync both ways for a review to work at all — previously a guest in
+    // the default review mode had no socket, so nothing the owner did ever
+    // reached them ("it only shows on the owner's screen"). liveSessionActive
+    // now gates only the heavy live-session UI (presence bar, cursors,
+    // screen-share), not this baseline real-time sync.
+    if (!token || (!effectiveUser && !effectiveGuest)) return;
 
     const socket = getSocket();
     if (!socket.connected) {
@@ -376,7 +388,23 @@ export default function CollabCartPage({ overrideView }) {
       }, 1400);
     });
 
-    // ADVISOR mode — live vote tally, the cheapest joy per line of code.
+    // ADVISOR mode — someone hit "Ask to vote": open the same panel on
+    // everyone's screen, not just the asker's. Without this the vote never
+    // "came in" for the people whose opinion was being asked for.
+    socket.on('vote:opened', ({ cartItemId, options, tally }) => {
+      setVoteOptions({ cartItemId, options, tally: tally || {} });
+      // The panel only renders on the item it belongs to, so bring everyone
+      // to that item — otherwise someone parked on a different card is
+      // being asked a question they can't see.
+      const idx = itemsRef.current.findIndex(it => it.id === cartItemId);
+      if (idx >= 0) {
+        setCurrentIndex(idx);
+        setCurrentImageIndex(0);
+      }
+      scrollToViewportBottom();
+    });
+    // live vote tally, the cheapest joy per line of code. Now also opens the
+    // panel if a vote lands before the vote:opened event was seen.
     socket.on('vote:updated', ({ cartItemId, tally }) => {
       setVoteOptions(prev => (prev && prev.cartItemId === cartItemId) ? { ...prev, tally } : prev);
     });
@@ -408,6 +436,7 @@ export default function CollabCartPage({ overrideView }) {
       socket.off('peer:resolved');
       socket.off('payer_lock:updated');
       socket.off('cart:item_swapped');
+      socket.off('vote:opened');
       socket.off('vote:updated');
       socket.off('reaction:new');
       socket.off('member:joined');
@@ -415,7 +444,11 @@ export default function CollabCartPage({ overrideView }) {
       socket.off('mission:slot_filled');
       socket.off('mission:orchestrate_done');
     };
-  }, [effectiveUser, effectiveGuest, token, mode, missionInfo, liveSessionActive]);
+    // liveSessionActive deliberately NOT a dependency — the socket stays
+    // connected for the whole visit regardless of whether the live-session
+    // UI is open, so opting in/out never tears down and rebuilds the
+    // listeners (which would drop reactions/votes arriving mid-toggle).
+  }, [effectiveUser, effectiveGuest, token, mode, missionInfo]);
 
   async function loadSession(guestOverride) {
     setLoading(true);

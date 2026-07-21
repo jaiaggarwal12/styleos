@@ -365,6 +365,15 @@ router.get('/:token/vote-options/:cartItemId', identify, async (req, res) => {
     const tally = {};
     for (const v of votes) tally[v.content] = (tally[v.content] || 0) + 1;
 
+    // "Ask them to vote" has to actually reach the people being asked —
+    // without this broadcast the panel only ever opened on the asker's own
+    // screen, so a vote never "came in" for anyone else in the room.
+    if (req.io) {
+      req.io.to(`collab_${req.params.token}`).emit('vote:opened', {
+        cartItemId: req.params.cartItemId, options, tally,
+      });
+    }
+
     res.json({ options, tally });
   } catch (err) {
     console.error(err);
