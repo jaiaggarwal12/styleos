@@ -20,7 +20,7 @@ export default function SimilarProductsContainer() {
                 className="close-similar-product" 
                 onClick={() => dispatch(hideSimilarProducts())}
             >
-                <i class="fas fa-arrow-left"></i>
+                <i className="fas fa-arrow-left"></i>
             </div>
             {
                 products.length === 0 ?

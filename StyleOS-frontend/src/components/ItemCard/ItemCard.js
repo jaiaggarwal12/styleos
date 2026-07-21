@@ -33,7 +33,7 @@ export default function ItemCard( {item , index} ) {
                     />
                 </Link>
                 <div className="rating-detail" > 
-                    {item.rating} <i class="fas fa-star star"></i> | {nFormatter(item.numberOfReviews)}
+                    {item.rating} <i className="fas fa-star star"></i> | {nFormatter(item.numberOfReviews)}
                 </div>
                 <div>
                     <ViewSimilarButton item={item} externalClassName="view-similar-mobile-button" />
@@ -59,7 +59,7 @@ export default function ItemCard( {item , index} ) {
                     onClick={()=> dispatch(addItemToWishlist(item))}
                     style={{display: isWishlisted ? 'none' : 'block'}}
                 >
-                    <i class="far fa-heart heart-add"></i>
+                    <i className="far fa-heart heart-add"></i>
                     &nbsp;
                     WISHLIST
                 </button>
@@ -69,7 +69,7 @@ export default function ItemCard( {item , index} ) {
                     style={{display: !isWishlisted ? 'none' : 'block'}}
                 >
                     <i 
-                        class="fas fa-heart heart-remove"
+                        className="fas fa-heart heart-remove"
                         style={{color: 'red'}}
                     ></i>
                     &nbsp;
@@ -77,14 +77,14 @@ export default function ItemCard( {item , index} ) {
                 </button>
                 {isBagged ? (
                     <button className="quick-add-button center added" disabled>
-                        <i class="fas fa-check"></i>&nbsp;IN BAG
+                        <i className="fas fa-check"></i>&nbsp;IN BAG
                     </button>
                 ) : (
                     <button
                         className="quick-add-button center"
                         onClick={e => { e.preventDefault(); e.stopPropagation(); setPickingSize(true); }}
                     >
-                        <i class="fas fa-shopping-bag"></i>&nbsp;ADD TO BAG
+                        <i className="fas fa-shopping-bag"></i>&nbsp;ADD TO BAG
                     </button>
                 )}
             </div>
@@ -93,19 +93,19 @@ export default function ItemCard( {item , index} ) {
                     onClick={()=> dispatch(addItemToWishlist(item))}
                     style={{display: isWishlisted ? 'none' : 'block'}}
                 >
-                    <i class="far fa-heart heart-add"></i>
+                    <i className="far fa-heart heart-add"></i>
                 </button>
                 <button
                     onClick={()=> dispatch(removeItemFromWishlist(item))}
                     style={{display: !isWishlisted ? 'none' : 'block'}}
                 >
-                    <i class="fas fa-heart heart-remove"></i>
+                    <i className="fas fa-heart heart-remove"></i>
                 </button>
                 <button
                     onClick={e => { e.preventDefault(); e.stopPropagation(); setPickingSize(true); }}
                     style={{display: isBagged ? 'none' : 'block'}}
                 >
-                    <i class="fas fa-shopping-bag"></i>
+                    <i className="fas fa-shopping-bag"></i>
                 </button>
             </div>
             {pickingSize && (

@@ -36,7 +36,7 @@ export default function ActiveFilter() {
                             <span
                                 onClick={()=>dispatch(removeGenderFilter(gender))}
                             >
-                                <i class="fas fa-times remove-filter"></i>
+                                <i className="fas fa-times remove-filter"></i>
                             </span>
                         </div>
                     )
@@ -53,7 +53,7 @@ export default function ActiveFilter() {
                             <span
                                 onClick={()=>dispatch(removeDiscountFilter(discount))}
                             >
-                                <i class="fas fa-times remove-filter"></i>
+                                <i className="fas fa-times remove-filter"></i>
                             </span>
                         </div>
                     )
@@ -70,7 +70,7 @@ export default function ActiveFilter() {
                             <span
                                 onClick={()=>dispatch(removeColorFilter(color))}
                             >
-                                <i class="fas fa-times remove-filter"></i>
+                                <i className="fas fa-times remove-filter"></i>
                             </span>
                         </div>
                     )
@@ -88,7 +88,7 @@ export default function ActiveFilter() {
                             <span
                                 onClick={()=>dispatch(removePriceFilter(price))}
                             >
-                                <i class="fas fa-times remove-filter"></i>
+                                <i className="fas fa-times remove-filter"></i>
                             </span>
                         </div>
                     )

@@ -36,21 +36,21 @@ export default function BagItemCard({ item }) {
                             className="remove-item-button" 
                             onClick={()=>dispatch(removeItemFromBag(item))}
                         >
-                            <i class="fas fa-times-circle"></i>
+                            <i className="fas fa-times-circle"></i>
                         </button>
                         <button 
                             className="wishlist-item-from-bag wishlist-bag-button " 
                             onClick={()=>dispatch(addItemToWishlist(item))}
                             style={{display: isWishListed ? "none" : "block"}}
                         >
-                            <i class="far fa-heart"></i>
+                            <i className="far fa-heart"></i>
                         </button>
                         <button 
                             className="unwishlist-item-from-bag wishlist-bag-button" 
                             onClick={()=>dispatch(removeItemFromWishlist(item))}
                             style={{display: !isWishListed ? "none" : "block"}}
                         >
-                            <i class="fas fa-heart"></i>
+                            <i className="fas fa-heart"></i>
                         </button>
                     </>
                     <div className="bag-item-quantity">
@@ -58,13 +58,13 @@ export default function BagItemCard({ item }) {
                         <span
                             onClick={()=>dispatch(setQuantity(item, item.quantity-1))}
                         >
-                            <i class="fas fa-minus-square quantity-button"></i>
+                            <i className="fas fa-minus-square quantity-button"></i>
                         </span>
                         <span className="quantity-value"> {item.quantity} </span>
                         <span
                             onClick={()=>dispatch(setQuantity(item, item.quantity+1))}
                         >
-                        <i class="fas fa-plus-square quantity-button "></i>
+                        <i className="fas fa-plus-square quantity-button "></i>
                         </span>
                     </div>
                     <div className="bag-item-size" >
@@ -82,7 +82,7 @@ export default function BagItemCard({ item }) {
                                             onClick={()=>dispatch(setSize(item, size))}
                                             checked={item.size === size}
                                         />
-                                        <label className="bag-item-size-label" for={item.id + index} >
+                                        <label className="bag-item-size-label" htmlFor={item.id + index} >
                                             <span className="bag-item-size-number" > {size} </span>
                                         </label>
                                     </>

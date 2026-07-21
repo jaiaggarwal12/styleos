@@ -25,7 +25,7 @@ export default function Sort({sortParameter}) {
                 }
             </span>
             <span className="down-arrow">
-                <i class="fas fa-chevron-down"></i>
+                <i className="fas fa-chevron-down"></i>
             </span>
             <div className="sort-list" >
                 {

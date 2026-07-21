@@ -34,7 +34,7 @@ export default function ProductDetailsContainer({product}) {
             <p className="product-name" >{product.productName}</p>
             <div className="product-rating-count" >
                 <span className="rating" >{product.rating}</span>
-                <span className="star-icon" > <i class="fas fa-star"></i> | </span>
+                <span className="star-icon" > <i className="fas fa-star"></i> | </span>
                 <span className="no-of-reviews" >  {nFormatter(product.numberOfReviews,1)} Ratings </span>   
             </div>
             <div className="product-price-details" >
@@ -65,7 +65,7 @@ export default function ProductDetailsContainer({product}) {
                                     }
                                     checked={selectedSize === size}
                                 />
-                                <label className="detail-size-label" for={product.id + index} >
+                                <label className="detail-size-label" htmlFor={product.id + index} >
                                     <span className="detail-size-number" > {size} </span>
                                 </label>
                             </>
@@ -86,7 +86,7 @@ export default function ProductDetailsContainer({product}) {
                                 dispatch(addItemToBag(product , selectedSize));
                         }}
                     >
-                        <i class="fas fa-shopping-bag"></i>
+                        <i className="fas fa-shopping-bag"></i>
                         &nbsp;
                         ADD TO BAG
                     </button>
@@ -99,7 +99,7 @@ export default function ProductDetailsContainer({product}) {
                     >
                         GO TO BAG
                         &nbsp;
-                        <i class="fas fa-arrow-right"></i>
+                        <i className="fas fa-arrow-right"></i>
                     </button>
                 </>
                 <>
@@ -108,7 +108,7 @@ export default function ProductDetailsContainer({product}) {
                         className="wishlist-handler-button  add-to-wishlist-button"
                         onClick={()=>{dispatch(addItemToWishlist(product));}}
                     >
-                        <i class="far fa-heart"></i>
+                        <i className="far fa-heart"></i>
                         &nbsp;
                         WISHLIST
                     </button>
@@ -117,7 +117,7 @@ export default function ProductDetailsContainer({product}) {
                         className="wishlist-handler-button remove-from-wishlist-button"
                         onClick={()=>{dispatch(removeItemFromWishlist(product));}}
                     >
-                        <i class="fas fa-heart" style={{color:"red"}} ></i>
+                        <i className="fas fa-heart" style={{color:"red"}} ></i>
                         &nbsp;
                         WISHLISTED
                     </button>

@@ -27,7 +27,7 @@ export default function Modal() {
                 className="modal-close-button" 
                 onClick={() => dispatch(closeModal())}
             > 
-                <i class="fas fa-times"></i> 
+                <i className="fas fa-times"></i> 
             </button>
             {
                 renderSwitch(modalContent)

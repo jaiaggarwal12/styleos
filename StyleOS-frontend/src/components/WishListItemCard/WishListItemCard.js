@@ -30,7 +30,7 @@ export default function WishListItemCard({ item }) {
                     className="remove-item-button" 
                     onClick={()=> dispatch(removeItemFromWishlist(item))} 
                 >
-                    <i class="fas fa-times-circle"></i>
+                    <i className="fas fa-times-circle"></i>
                 </button>
                 <button 
                     className="move-to-bag-button" 

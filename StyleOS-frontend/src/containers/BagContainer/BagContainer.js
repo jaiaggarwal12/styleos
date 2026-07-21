@@ -121,8 +121,17 @@ export default function BagContainer() {
                     className={`checkout center ${ bag.length > 0 && !creatingCart ? "" : "inactive"} `}
                     onClick={ checkOutHandler }
                 >
+                    {/* Both branches render a single <span> element, never a
+                        bare text node swapping with a fragment. React removes
+                        the old child by DOM reference on that swap, so if
+                        anything has re-wrapped the text node (Google Translate
+                        wraps text in <font> tags) removeChild throws
+                        NotFoundError and the whole app unmounts. Keeping it
+                        element-to-element makes the reconciliation safe. */}
                     <p>
-                        {creatingCart ? 'Preparing your cart...' : <>Checkout <i class="fas fa-arrow-circle-right"></i></>}
+                        {creatingCart
+                            ? <span>Preparing your cart...</span>
+                            : <span>Checkout <i className="fas fa-arrow-circle-right"></i></span>}
                     </p>
                 </div>
             </div>

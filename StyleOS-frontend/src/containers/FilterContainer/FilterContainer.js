@@ -21,11 +21,11 @@ export default function FilterContainer() {
         <div 
             className={`mobile-filter-icon ${!isFilterContainerActive ? '' : 'mobile-hide-filter'}`}
             onClick={() => setFilterContainerActive(true)}
-        ><i class="fas fa-sliders-h"></i></div>
+        ><i className="fas fa-sliders-h"></i></div>
         <div 
             className={`mobile-filter-icon ${isFilterContainerActive ? '' : 'mobile-hide-filter'} close-filter-container`}
             onClick={() => setFilterContainerActive(false)}
-        ><i class="fas fa-times"></i></div>
+        ><i className="fas fa-times"></i></div>
         <div 
             className= {`filter-container ${isFilterContainerActive ? '' : 'mobile-hide-filter'}`}
         >
