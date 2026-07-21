@@ -949,7 +949,15 @@ export default function CollabCartPage({ overrideView }) {
         </>
       ) : (
         <div className="review-mode-banner">
-          <span className="review-mode-label">📋 Review mode — swipe, react, and comment below</span>
+          {/* Now that the socket connects in review mode too, presence is
+              known here — so someone reviewing can actually SEE that others
+              are in the room instead of the live session being invisible
+              until they happen to click. */}
+          <span className="review-mode-label">
+            {presence.length > 0
+              ? `🟢 ${presence.length} ${presence.length === 1 ? 'person is' : 'people are'} here now`
+              : '📋 Review mode — swipe, react, and comment below'}
+          </span>
           <button className="btn-collab review-mode-cta" onClick={() => setLiveSessionActive(true)}>
             🎥 {isActualOwner ? 'Start' : 'Join'} Live Session
           </button>
